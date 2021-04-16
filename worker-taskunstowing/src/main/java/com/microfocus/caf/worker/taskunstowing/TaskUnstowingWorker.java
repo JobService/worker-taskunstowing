@@ -20,13 +20,22 @@ package com.microfocus.caf.worker.taskunstowing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import com.hpe.caf.api.worker.TaskMessage;
+import com.hpe.caf.api.worker.TaskSourceInfo;
+import com.hpe.caf.api.worker.TaskStatus;
+import com.hpe.caf.api.worker.TrackingInfo;
 import com.hpe.caf.worker.document.exceptions.DocumentWorkerTransientException;
 import com.hpe.caf.worker.document.extensibility.DocumentWorker;
 import com.hpe.caf.worker.document.model.Document;
 import com.hpe.caf.worker.document.model.HealthMonitor;
 import com.microfocus.caf.worker.taskunstowing.database.DatabaseClient;
 import com.microfocus.caf.worker.taskunstowing.database.StowedTaskRow;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,24 +78,25 @@ public final class TaskUnstowingWorker implements DocumentWorker
         }
 
         LOGGER.info("Searching for stowed tasks for partition id: {} and job id: {}", partitionId, jobId);
+        final List<StowedTaskRow> stowedTaskRows;
         try {
-            final List<StowedTaskRow> stowedTasks = databaseClient.getStowedTasks(partitionId, jobId);
-            LOGGER.info("Found: {} stowed task(s) for partition id: {} and job id: {}", stowedTasks.size(), partitionId, jobId);
-            stowedTasks.forEach(st -> {
-                System.out.println("st.getTaskApiVersion()" + st.getTaskApiVersion());
-                System.out.println("st.getTaskClassifier()" + st.getTaskClassifier());
-                System.out.println("st.getPartitionId()" + st.getPartitionId());
-                System.out.println("st.getJobId()" + st.getJobId());
-                System.out.println("st.getTo()" + st.getTo());
-                System.out.println("st.getContext()" + st.getContext());
-                System.out.println("st.getId()" + st.getId());
-                System.out.println("st.getSourceInfo()" + st.getSourceInfo());
-                System.out.println("st.getTaskData()" + st.getTaskData());
-                System.out.println("st.getTrackingInfo()" + st.getTrackingInfo());
-            });
-            // TODO Map List<StowedTaskRow> to tasks and send message(s) to worker(s)
-         } catch (final Exception exception) {
-            processFailure(TaskUnstowingWorkerFailure.FAILED_TO_READ_FROM_DATABASE, exception, document);
+            stowedTaskRows = databaseClient.getAndDeleteStowedTasks(partitionId, jobId);
+            LOGGER.info("Found: {} stowed task(s) for partition id: {} and job id: {}", stowedTaskRows.size(), partitionId, jobId);
+        } catch (final Exception exception) {
+            processFailure(TaskUnstowingWorkerFailure.FAILED_TO_READ_AND_DELETE_FROM_DATABASE, exception, document);
+            return;
+        }
+
+        for (final StowedTaskRow stowedTaskRow : stowedTaskRows) {
+            final TaskMessage taskMessage;
+            try {
+                taskMessage = convertStowedTaskRowToTaskMessage(stowedTaskRow);
+            } catch (final IOException exception) {
+                processFailure(TaskUnstowingWorkerFailure.FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE, exception, document);
+                continue;
+            }
+
+            // TODO send taskMessage
         }
     }
 
@@ -105,5 +115,20 @@ public final class TaskUnstowingWorker implements DocumentWorker
     {
         LOGGER.error(TaskUnstowingWorkerFailure.getFailureMsg(), cause);
         TaskUnstowingWorkerFailure.addToDoc(document, cause);
+    }
+
+    private static TaskMessage convertStowedTaskRowToTaskMessage(final StowedTaskRow stowedTaskRow) throws IOException
+    {
+        return new TaskMessage(
+            UUID.randomUUID().toString(),
+            stowedTaskRow.getTaskClassifier(),
+            stowedTaskRow.getTaskApiVersion(),
+            stowedTaskRow.getTaskData(),
+            TaskStatus.valueOf(stowedTaskRow.getTaskStatus()),
+            OBJECT_MAPPER.readValue(stowedTaskRow.getContext(), Map.class),
+            stowedTaskRow.getTo(),
+            OBJECT_MAPPER.readValue(stowedTaskRow.getTrackingInfo(), TrackingInfo.class),
+            OBJECT_MAPPER.readValue(stowedTaskRow.getSourceInfo(), TaskSourceInfo.class),
+            stowedTaskRow.getCorrelationId());
     }
 }

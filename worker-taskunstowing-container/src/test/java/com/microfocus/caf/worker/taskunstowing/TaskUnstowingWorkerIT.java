@@ -76,7 +76,7 @@ public class TaskUnstowingWorkerIT
     public void cleanupTest(Method method) throws Exception
     {
         queueServices.close();
-    //    integrationTestDatabaseClient.deleteStowedTasks();
+        integrationTestDatabaseClient.deleteStowedTasks();
         LOGGER.info("End of: {}", method.getName());
     }
 
@@ -100,7 +100,13 @@ public class TaskUnstowingWorkerIT
         final byte[] tenant1TrackingInfoBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1TrackingInfo);
 
         integrationTestDatabaseClient.insertStowedTask(
-            tenant1PartitionId, tenant1JobId, "DocumentWorkerTask", 1, tenant1TaskDataBytes, "NEW_TASK", new byte[0],
+            tenant1PartitionId,
+            tenant1JobId,
+            "DocumentWorkerTask",
+            1,
+            tenant1TaskDataBytes,
+            "NEW_TASK",
+            OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
             TARGET_QUEUE_FOR_UNSTOWED_TASKS, tenant1TrackingInfoBytes, null, "1");
 
         final String tenant2PartitionId = "tenant2";
@@ -119,8 +125,15 @@ public class TaskUnstowingWorkerIT
         final byte[] tenant2TrackingInfoBytes = OBJECT_MAPPER.writeValueAsBytes(tenant2TrackingInfo);
 
         integrationTestDatabaseClient.insertStowedTask(
-            tenant2PartitionId, tenant2JobId, "DocumentWorkerTask", 1, tenant2TaskDataBytes, "NEW_TASK", new byte[0],
-            TARGET_QUEUE_FOR_UNSTOWED_TASKS, tenant2TrackingInfoBytes, null, "1");
+            tenant2PartitionId,
+            tenant2JobId,
+            "DocumentWorkerTask",
+            1,
+            tenant2TaskDataBytes,
+            "NEW_TASK",
+            OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
+            tenant2TrackingInfoBytes, null, "1");
 
         integrationTestDatabaseClient.waitUntilStowedTaskTableContains(2, 30000);
 
@@ -149,9 +162,11 @@ public class TaskUnstowingWorkerIT
         integrationTestDatabaseClient.waitUntilStowedTaskTableContains(1, 30000);
 
         // And the task should have been sent onto the worker it is intended for
+        queueServices.waitForUnstowedTaskQueueMessages(1, 30000);
+        assertEquals("Expected 1 message to have been sent to the worker pointed to by the 'to' field in the unstowed task message", 1,
+                     queueServices.getUnstowedTaskQueueMessages().size());
         // TODO
     }
-
 
     private static DocumentWorkerDocument createSampleDocumentWithField(final String fieldKey, final String fieldValue)
     {

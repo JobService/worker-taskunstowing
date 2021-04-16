@@ -27,7 +27,8 @@ public enum TaskUnstowingWorkerFailure
 {
     PARTITION_ID_MISSING_FROM_CUSTOM_DATA("TUW-001", "Custom data should contain a non-empty 'partitionId' property"),
     JOB_ID_MISSING_FROM_CUSTOM_DATA("TUW-002", "Custom data should contain a non-empty 'jobId' property"),
-    FAILED_TO_READ_FROM_DATABASE("TUW-003", "Failed to read stowed tasks from database");
+    FAILED_TO_READ_AND_DELETE_FROM_DATABASE("TUW-003", "Failed to read and delete from database"),
+    FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE("TUW-004", "Failed to convert database row to task message");
 
     private final String failureId;
     private final String failureMsg;

@@ -57,10 +57,10 @@
             <artifactId>job-service-util</artifactId>
             <type>jar</type>
         </dependency>-->
-<!--        <dependency>
+        <dependency>
             <groupId>com.github.workerframework</groupId>
             <artifactId>worker-api</artifactId>
-        </dependency>-->
+        </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>

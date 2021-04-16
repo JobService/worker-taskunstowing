@@ -44,7 +44,7 @@ public final class DatabaseClient
         });
     }
 
-    public List<StowedTaskRow> getStowedTasks(final String partitionId, final String jobId) throws Exception
+    public List<StowedTaskRow> getAndDeleteStowedTasks(final String partitionId, final String jobId) throws Exception
     {
         return jdbi.withHandle(handle -> {
             return handle.createQuery(
