@@ -25,6 +25,7 @@ import com.hpe.caf.api.worker.TaskMessage;
 import com.hpe.caf.api.worker.TaskSourceInfo;
 import com.hpe.caf.api.worker.TaskStatus;
 import com.hpe.caf.api.worker.TrackingInfo;
+import com.hpe.caf.api.worker.WorkerTaskData;
 import com.hpe.caf.worker.document.exceptions.DocumentWorkerTransientException;
 import com.hpe.caf.worker.document.extensibility.DocumentWorker;
 import com.hpe.caf.worker.document.model.Document;
@@ -79,6 +80,12 @@ public final class TaskUnstowingWorker implements DocumentWorker
             return;
         }
 
+        final WorkerTaskData workerTaskData = document.getTask().getService(WorkerTaskData.class);
+        if (workerTaskData == null) {
+            processFailure(TaskUnstowingWorkerFailure.FAILED_TO_GET_WORKER_TASK_DATA, document);
+            return;
+        }
+
         LOGGER.info("Searching for stowed tasks for partition id: {} and job id: {}", partitionId, jobId);
         final List<StowedTaskRow> stowedTaskRows;
         try {
@@ -98,7 +105,15 @@ public final class TaskUnstowingWorker implements DocumentWorker
                 continue;
             }
 
-            // TODO send taskMessage
+            try {
+                workerTaskData.sendMessage(taskMessage);
+                LOGGER.info("Sent unstowed task message for partition id: {} and job id: {} to queue: {}",
+                            partitionId, jobId, taskMessage.getTo());
+            } catch (final Exception exception) {
+                // TODO What to do now, try to insert row again?
+                // TODO add job id etc to failure messages?
+                processFailure(TaskUnstowingWorkerFailure.FAILED_TO_SEND_UNSTOWED_TASK_MESSAGE_TO_WORKER, exception, document);
+            }
         }
     }
 

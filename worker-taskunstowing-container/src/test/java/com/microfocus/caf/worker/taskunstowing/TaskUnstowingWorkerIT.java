@@ -115,7 +115,7 @@ public class TaskUnstowingWorkerIT
         final String tenant2JobId = "job2";
         final DocumentWorkerDocumentTask tenant2DocumentWorkerDocumentTask = new DocumentWorkerDocumentTask();
         tenant2DocumentWorkerDocumentTask.document = createSampleDocumentWithField("TENANT", tenant2PartitionId);
-        final byte[] tenant2TaskDataBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1DocumentWorkerDocumentTask);
+        final byte[] tenant2TaskDataBytes = OBJECT_MAPPER.writeValueAsBytes(tenant2DocumentWorkerDocumentTask);
 
         final TrackingInfo tenant2TrackingInfo = new TrackingInfo(
             tenant2PartitionId + ":" + tenant2JobId,
@@ -167,13 +167,12 @@ public class TaskUnstowingWorkerIT
         queueServices.waitForUnstowedTaskQueueMessages(1, 30000);
         assertEquals("Expected 1 message to have been sent to the worker pointed to by the 'to' field in the unstowed task message", 1,
                      queueServices.getUnstowedTaskQueueMessages().size());
-        // TODO
+        // TODO check task message
     }
 
     private static DocumentWorkerDocument createSampleDocumentWithField(final String fieldKey, final String fieldValue)
     {
         final DocumentWorkerDocument documentWorkerDocument = new DocumentWorkerDocument();
-        documentWorkerDocument.reference = "1";
         final Map<String, List<DocumentWorkerFieldValue>> documentWorkerDocumentFields = new HashMap<>();
         final DocumentWorkerFieldValue documentWorkerFieldValue = new DocumentWorkerFieldValue();
         documentWorkerFieldValue.encoding = DocumentWorkerFieldEncoding.utf8;
