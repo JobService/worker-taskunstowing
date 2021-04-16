@@ -56,6 +56,8 @@ import org.testng.annotations.BeforeClass;
 public class TaskUnstowingWorkerIT
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskUnstowingWorkerIT.class);
+    // FAIL_ON_UNKNOWN_PROPERTIES is set to false because of:
+    // UnrecognizedPropertyException: Unrecognized field \"jobId\" (class com.hpe.caf.api.worker.TrackingInfo), not marked as ignorable
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
     private static final String WORKER_TASKUNSTOWING_IN_QUEUE = "worker-taskunstowing-in";
     private static final String TARGET_QUEUE_FOR_UNSTOWED_TASKS = "dataprocessing-elasticquery-in";

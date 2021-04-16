@@ -18,6 +18,7 @@
  */
 package com.microfocus.caf.worker.taskunstowing;
 
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.hpe.caf.api.worker.TaskMessage;
@@ -31,7 +32,6 @@ import com.hpe.caf.worker.document.model.HealthMonitor;
 import com.microfocus.caf.worker.taskunstowing.database.DatabaseClient;
 import com.microfocus.caf.worker.taskunstowing.database.StowedTaskRow;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +42,9 @@ import org.slf4j.LoggerFactory;
 public final class TaskUnstowingWorker implements DocumentWorker
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskUnstowingWorker.class);
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    // FAIL_ON_UNKNOWN_PROPERTIES is set to false because of:
+    // UnrecognizedPropertyException: Unrecognized field \"jobId\" (class com.hpe.caf.api.worker.TrackingInfo), not marked as ignorable
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
     private final DatabaseClient databaseClient;
 
     public TaskUnstowingWorker(final DatabaseClient databaseClient)
@@ -125,10 +127,12 @@ public final class TaskUnstowingWorker implements DocumentWorker
             stowedTaskRow.getTaskApiVersion(),
             stowedTaskRow.getTaskData(),
             TaskStatus.valueOf(stowedTaskRow.getTaskStatus()),
-            OBJECT_MAPPER.readValue(stowedTaskRow.getContext(), Map.class),
+            stowedTaskRow.getContext() != null
+            ? OBJECT_MAPPER.readValue(stowedTaskRow.getContext(), Map.class)
+            : Collections.<String, byte[]>emptyMap(),
             stowedTaskRow.getTo(),
-            OBJECT_MAPPER.readValue(stowedTaskRow.getTrackingInfo(), TrackingInfo.class),
-            OBJECT_MAPPER.readValue(stowedTaskRow.getSourceInfo(), TaskSourceInfo.class),
+            stowedTaskRow.getTrackingInfo() != null ? OBJECT_MAPPER.readValue(stowedTaskRow.getTrackingInfo(), TrackingInfo.class) : null,
+            stowedTaskRow.getSourceInfo() != null ? OBJECT_MAPPER.readValue(stowedTaskRow.getSourceInfo(), TaskSourceInfo.class) : null,
             stowedTaskRow.getCorrelationId());
     }
 }
