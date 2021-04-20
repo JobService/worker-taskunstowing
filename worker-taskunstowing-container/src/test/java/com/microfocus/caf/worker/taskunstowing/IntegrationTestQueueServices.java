@@ -60,9 +60,9 @@ import static com.microfocus.caf.worker.taskunstowing.IntegrationTestSystemPrope
 /**
  * This class is responsible sending task data to the target queue.
  */
-public final class QueueServices
+public final class IntegrationTestQueueServices
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(QueueServices.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestQueueServices.class);
 
     private static final Map<String, List<String>> QUEUE_MESSAGES = new ConcurrentHashMap<>();
 
@@ -79,7 +79,7 @@ public final class QueueServices
     private final HttpHost rabbitHost;
     private final HttpClientContext httpContext;
 
-    public QueueServices() throws IOException, TimeoutException
+    public IntegrationTestQueueServices() throws IOException, TimeoutException
     {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost(DOCKER_HOST_ADDRESS);

@@ -60,19 +60,19 @@ public class TaskUnstowingWorkerIT
     private static final long TWO_MINUTES_IN_MILLIS = 120000L;
 
     private final IntegrationTestDatabaseClient integrationTestDatabaseClient = new IntegrationTestDatabaseClient();
-    private QueueServices queueServices;
+    private IntegrationTestQueueServices integrationTestQueueServices;
 
     @BeforeMethod
     public void setUpTest(Method method) throws Exception
     {
         LOGGER.info("Starting: {}", method.getName());
-        queueServices = new QueueServices();
+        integrationTestQueueServices = new IntegrationTestQueueServices();
     }
 
     @AfterMethod
     public void cleanupTest(Method method) throws Exception
     {
-        queueServices.close();
+        integrationTestQueueServices.close();
         integrationTestDatabaseClient.deleteStowedTasks();
         LOGGER.info("End of: {}", method.getName());
     }
@@ -157,19 +157,19 @@ public class TaskUnstowingWorkerIT
             null,
             "1");
 
-        queueServices.startListening();
-        queueServices.sendTaskMessage(resumeJobTaskMessage);
+        integrationTestQueueServices.startListening();
+        integrationTestQueueServices.sendTaskMessage(resumeJobTaskMessage);
 
         // Then the task should have been removed from the database
         integrationTestDatabaseClient.waitUntilStowedTaskTableContains(1, 30000);
 
         // And the task should have been sent onto the worker it is intended for
-        queueServices.waitForUnstowedTaskQueueMessages(1, 30000);
+        integrationTestQueueServices.waitForUnstowedTaskQueueMessages(1, 30000);
         assertEquals("Expected 1 message to have been sent to the queue named in the unstowed task message's 'to' field", 1,
-                     queueServices.getUnstowedTaskQueueMessages().size());
+                     integrationTestQueueServices.getUnstowedTaskQueueMessages().size());
 
         final TaskMessage unstowedTaskMessage
-            = OBJECT_MAPPER.readValue(queueServices.getUnstowedTaskQueueMessages().get(0), TaskMessage.class);
+            = OBJECT_MAPPER.readValue(integrationTestQueueServices.getUnstowedTaskQueueMessages().get(0), TaskMessage.class);
         assertNotNull("Unable to convert unstowed task message to an instance of TaskMessage", unstowedTaskMessage);
 
         // Single value task message fields
@@ -266,13 +266,13 @@ public class TaskUnstowingWorkerIT
             null,
             "1");
 
-        queueServices.startListening();
-        queueServices.sendTaskMessage(resumeJobTaskMessage);
+        integrationTestQueueServices.startListening();
+        integrationTestQueueServices.sendTaskMessage(resumeJobTaskMessage);
 
         // Then the task should have been sent to the worker's error queue
-        queueServices.waitForErrorQueueMessages(1, 30000);
+        integrationTestQueueServices.waitForErrorQueueMessages(1, 30000);
         assertEquals("Expected 1 message to have been sent to the workers error queue", 1,
-                     queueServices.getErrorQueueMessages().size());
+                     integrationTestQueueServices.getErrorQueueMessages().size());
 
         // And the task should NOT have been removed from the database
         integrationTestDatabaseClient.waitUntilStowedTaskTableContains(1, 30000);
@@ -327,13 +327,13 @@ public class TaskUnstowingWorkerIT
             null,
             "1");
 
-        queueServices.startListening();
-        queueServices.sendTaskMessage(resumeJobTaskMessage);
+        integrationTestQueueServices.startListening();
+        integrationTestQueueServices.sendTaskMessage(resumeJobTaskMessage);
 
         // Then the task should have been sent to the worker's error queue
-        queueServices.waitForErrorQueueMessages(1, 30000);
+        integrationTestQueueServices.waitForErrorQueueMessages(1, 30000);
         assertEquals("Expected 1 message to have been sent to the workers error queue", 1,
-                     queueServices.getErrorQueueMessages().size());
+                     integrationTestQueueServices.getErrorQueueMessages().size());
 
         // And the task should NOT have been removed from the database
         integrationTestDatabaseClient.waitUntilStowedTaskTableContains(1, 30000);
