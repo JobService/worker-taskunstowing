@@ -44,15 +44,26 @@ public final class DatabaseClient
         });
     }
 
-    public List<StowedTaskRow> getAndDeleteStowedTasks(final String partitionId, final String jobId) throws Exception
+    public List<StowedTaskRow> getStowedTasks(final String partitionId, final String jobId) throws Exception
     {
         return jdbi.withHandle(handle -> {
             return handle.createQuery(
-                "DELETE FROM " + tableName + " WHERE " + PARTITION_ID + " = :partitionId AND " + JOB_ID + " = :jobId RETURNING *;")
+                "SELECT * FROM " + tableName + " WHERE " + PARTITION_ID + " = :partitionId AND " + JOB_ID + " = :jobId")
                 .bind("partitionId", partitionId)
                 .bind("jobId", jobId)
                 .map(new StowedTaskRowMapper())
                 .list();
+        });
+    }
+
+    public void deleteStowedTask(final String partitionId, final String jobId) throws Exception
+    {
+        jdbi.useHandle(handle -> {
+            handle.createUpdate(
+                "DELETE FROM " + tableName + " WHERE " + PARTITION_ID + " = :partitionId AND " + JOB_ID + " = :jobId")
+                .bind("partitionId", partitionId)
+                .bind("jobId", jobId)
+                .execute();
         });
     }
 }

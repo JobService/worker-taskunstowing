@@ -68,31 +68,45 @@ public final class TaskUnstowingWorker implements DocumentWorker
     @Override
     public void processDocument(final Document document) throws InterruptedException, DocumentWorkerTransientException
     {
+        LOGGER.info("Received request to unstow task(s)");
+
         final String partitionId = document.getCustomData("partitionId");
         if (Strings.isNullOrEmpty(partitionId)) {
-            processFailure(TaskUnstowingWorkerFailure.PARTITION_ID_MISSING_FROM_CUSTOM_DATA, document);
+            final TaskUnstowingWorkerFailure failure = new TaskUnstowingWorkerFailure(
+                TaskUnstowingWorkerFailure.PARTITION_ID_MISSING_FROM_CUSTOM_DATA_ID,
+                "Custom data should contain a non-empty 'partitionId' property");
+            processFailure(failure, document);
             return;
         }
 
         final String jobId = document.getCustomData("jobId");
         if (Strings.isNullOrEmpty(jobId)) {
-            processFailure(TaskUnstowingWorkerFailure.JOB_ID_MISSING_FROM_CUSTOM_DATA, document);
+            final TaskUnstowingWorkerFailure failure = new TaskUnstowingWorkerFailure(
+                TaskUnstowingWorkerFailure.JOB_ID_MISSING_FROM_CUSTOM_DATA_ID,
+                "Custom data should contain a non-empty 'jobId' property");
+            processFailure(failure, document);
             return;
         }
 
         final WorkerTaskData workerTaskData = document.getTask().getService(WorkerTaskData.class);
         if (workerTaskData == null) {
-            processFailure(TaskUnstowingWorkerFailure.FAILED_TO_GET_WORKER_TASK_DATA, document);
+            final TaskUnstowingWorkerFailure failure = new TaskUnstowingWorkerFailure(
+                TaskUnstowingWorkerFailure.FAILED_TO_GET_WORKER_TASK_DATA_ID,
+                "Failed to get worker task data");
+            processFailure(failure, document);
             return;
         }
 
-        LOGGER.info("Searching for stowed tasks for partition id: {} and job id: {}", partitionId, jobId);
+        LOGGER.info("Querying for stowed tasks for partition id {} and job id {}", partitionId, jobId);
         final List<StowedTaskRow> stowedTaskRows;
         try {
-            stowedTaskRows = databaseClient.getAndDeleteStowedTasks(partitionId, jobId);
-            LOGGER.info("Found: {} stowed task(s) for partition id: {} and job id: {}", stowedTaskRows.size(), partitionId, jobId);
+            stowedTaskRows = databaseClient.getStowedTasks(partitionId, jobId);
+            LOGGER.info("Found {} stowed task(s) for partition id {} and job id {}", stowedTaskRows.size(), partitionId, jobId);
         } catch (final Exception exception) {
-            processFailure(TaskUnstowingWorkerFailure.FAILED_TO_READ_AND_DELETE_FROM_DATABASE, exception, document);
+            final TaskUnstowingWorkerFailure failure = new TaskUnstowingWorkerFailure(
+                TaskUnstowingWorkerFailure.FAILED_TO_READ_FROM_DATABASE_ID,
+                String.format("Failed to read stowed task(s) for partition id %s and job id %s from database", partitionId, jobId));
+            processFailure(failure, exception, document);
             return;
         }
 
@@ -101,18 +115,33 @@ public final class TaskUnstowingWorker implements DocumentWorker
             try {
                 taskMessage = convertStowedTaskRowToTaskMessage(stowedTaskRow);
             } catch (final IOException exception) {
-                processFailure(TaskUnstowingWorkerFailure.FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE, exception, document);
+                final TaskUnstowingWorkerFailure failure = new TaskUnstowingWorkerFailure(
+                    TaskUnstowingWorkerFailure.FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE_ID,
+                    String.format("Failed to convert database row with id %s to task message", stowedTaskRow.getId()));
+                processFailure(failure, exception, document);
                 continue;
             }
 
             try {
                 workerTaskData.sendMessage(taskMessage);
-                LOGGER.info("Sent unstowed task message for partition id: {} and job id: {} to queue: {}",
-                            partitionId, jobId, taskMessage.getTo());
+                LOGGER.info("Sent unstowed task message with database id %s, partition id {} and job id {} to queue {}",
+                            stowedTaskRow.getId(), partitionId, jobId, taskMessage.getTo());
+                try {
+                    databaseClient.deleteStowedTask(partitionId, jobId);
+                } catch (final Exception exception) {
+                    final TaskUnstowingWorkerFailure failure = new TaskUnstowingWorkerFailure(
+                        TaskUnstowingWorkerFailure.FAILED_TO_DELETE_UNSTOWED_TASK_MESSAGE_FROM_DATABASE_ID,
+                        String.format("Sent unstowed task message with database id %s, partition id %s and job id %s to queue %s, but "
+                            + "failed to delete unstowed task message from database", stowedTaskRow.getId(), partitionId, jobId,
+                                      taskMessage.getTo()));
+                    processFailure(failure, exception, document);
+                }
             } catch (final Exception exception) {
-                // TODO What to do now, try to insert row again?
-                // TODO add job id etc to failure messages?
-                processFailure(TaskUnstowingWorkerFailure.FAILED_TO_SEND_UNSTOWED_TASK_MESSAGE_TO_WORKER, exception, document);
+                final TaskUnstowingWorkerFailure failure = new TaskUnstowingWorkerFailure(
+                    TaskUnstowingWorkerFailure.FAILED_TO_SEND_UNSTOWED_TASK_MESSAGE_TO_QUEUE_ID,
+                    String.format("Failed to send unstowed task message with database id %s, partition id %s and job id %s to queue %s",
+                                  stowedTaskRow.getId(), partitionId, jobId, taskMessage.getTo()));
+                processFailure(failure, exception, document);
             }
         }
     }

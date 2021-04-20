@@ -1,6 +1,45 @@
 # Task Unstowing Worker
 
-The Task Unstowing Worker is used to stow tasks received on it's input queue to a specified database table.
+The Task Unstowing Worker is a Document Worker used to read stowed tasks from a database, send them onto the queue named in the task's  
+`to` field, and then delete them from the database.
+
+## Input Message Format
+
+The input message for this worker is expected to contain the following two `customData` properties, which the Worker uses to identify  
+which tasks to unstow:
+
+* `partitionId` - The identifier of the partition
+* `jobId` - The identifier of the job
+
+Example input message:
+
+```json
+{
+    "version": 3,
+    "taskId": "89dfb12d-5de0-4b40-85ec-835e33ea447d",
+    "taskClassifier": "DocumentWorkerTask",
+    "taskApiVersion": 1,
+    "taskData": "ew0KICAiY3VzdG9tRGF0YSI6IHsNCiAgICAicGFydGl0aW9uSWQiOiAiYWNtZS1jb3JwIiwNCiAgICAiam9iSWQiOiAiam9iLTEiDQogIH0NCn0=",
+    "taskStatus": "NEW_TASK",
+    "context": 1,
+    "to": "worker-taskunstowing-in",
+    "tracking": null,
+    "sourceInfo": null,
+    "priority": null,
+    "correlationId": "1"
+  }
+```
+
+and it's base64-decoded `taskData`:
+
+```json
+{
+  "customData": {
+    "partitionId": "acme-corp",
+    "jobId": "job-1"
+  }
+}
+```
 
 ## Configuration
 
@@ -32,7 +71,7 @@ The Task Unstowing Worker is used to stow tasks received on it's input queue to 
     **Default**: `postgres`  
     **Description**: The password to use when establishing the connection to the PostgreSQL server.
 
-* `CAF_WORKER_TASKUNSTOWINGG_DATABASE_APPNAME`  
+* `CAF_WORKER_TASKUNSTOWING_DATABASE_APPNAME`  
     **Default**: `worker_taskunstowing`  
     **Description**: The application name used for PostgreSQL logging and monitoring.
 

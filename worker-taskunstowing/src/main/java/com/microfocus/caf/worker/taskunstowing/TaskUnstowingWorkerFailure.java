@@ -23,14 +23,15 @@ import com.hpe.caf.worker.document.model.Document;
 
 import java.text.MessageFormat;
 
-public enum TaskUnstowingWorkerFailure
+final class TaskUnstowingWorkerFailure
 {
-    PARTITION_ID_MISSING_FROM_CUSTOM_DATA("TUW-001", "Custom data should contain a non-empty 'partitionId' property"),
-    JOB_ID_MISSING_FROM_CUSTOM_DATA("TUW-002", "Custom data should contain a non-empty 'jobId' property"),
-    FAILED_TO_GET_WORKER_TASK_DATA("TUW-003", "Failed to get worker task data"),
-    FAILED_TO_READ_AND_DELETE_FROM_DATABASE("TUW-004", "Failed to read and delete from database"),
-    FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE("TUW-005", "Failed to convert database row to task message"),
-    FAILED_TO_SEND_UNSTOWED_TASK_MESSAGE_TO_WORKER("TUW-006", "Failed to send unstowed task message to worker");
+    public static final String PARTITION_ID_MISSING_FROM_CUSTOM_DATA_ID = "TUW-001";
+    public static final String JOB_ID_MISSING_FROM_CUSTOM_DATA_ID = "TUW-002";
+    public static final String FAILED_TO_GET_WORKER_TASK_DATA_ID = "TUW-003";
+    public static final String FAILED_TO_READ_FROM_DATABASE_ID = "TUW-004";
+    public static final String FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE_ID = "TUW-005";
+    public static final String FAILED_TO_DELETE_UNSTOWED_TASK_MESSAGE_FROM_DATABASE_ID = "TUW-006";
+    public static final String FAILED_TO_SEND_UNSTOWED_TASK_MESSAGE_TO_QUEUE_ID = "TUW-007";
 
     private final String failureId;
     private final String failureMsg;

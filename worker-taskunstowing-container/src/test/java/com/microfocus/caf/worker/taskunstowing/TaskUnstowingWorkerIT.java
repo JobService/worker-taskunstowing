@@ -21,7 +21,6 @@ package com.microfocus.caf.worker.taskunstowing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.hpe.caf.api.worker.TaskMessage;
-import com.hpe.caf.api.worker.TaskSourceInfo;
 import com.hpe.caf.api.worker.TaskStatus;
 import com.hpe.caf.api.worker.TrackingInfo;
 import com.hpe.caf.worker.document.DocumentWorkerDocument;
@@ -43,15 +42,11 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.microfocus.caf.worker.taskunstowing.IntegrationTestSystemProperties.*;
 import static com.fasterxml.jackson.databind.DeserializationFeature.*;
-import com.hpe.caf.api.worker.JobStatus;
 import java.time.LocalDate;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertNotNull;
 import static org.testng.AssertJUnit.assertNull;
-import static org.testng.AssertJUnit.assertTrue;
-import org.testng.annotations.BeforeClass;
 
 public class TaskUnstowingWorkerIT
 {
@@ -109,7 +104,10 @@ public class TaskUnstowingWorkerIT
             tenant1TaskDataBytes,
             "NEW_TASK",
             OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
-            TARGET_QUEUE_FOR_UNSTOWED_TASKS, tenant1TrackingInfoBytes, null, "1");
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
+            tenant1TrackingInfoBytes,
+            null,
+            "1");
 
         final String tenant2PartitionId = "tenant2";
         final String tenant2JobId = "job2";
@@ -135,7 +133,9 @@ public class TaskUnstowingWorkerIT
             "NEW_TASK",
             OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
             TARGET_QUEUE_FOR_UNSTOWED_TASKS,
-            tenant2TrackingInfoBytes, null, "1");
+            tenant2TrackingInfoBytes,
+            null,
+            "1");
 
         integrationTestDatabaseClient.waitUntilStowedTaskTableContains(2, 30000);
 
@@ -165,9 +165,178 @@ public class TaskUnstowingWorkerIT
 
         // And the task should have been sent onto the worker it is intended for
         queueServices.waitForUnstowedTaskQueueMessages(1, 30000);
-        assertEquals("Expected 1 message to have been sent to the worker pointed to by the 'to' field in the unstowed task message", 1,
+        assertEquals("Expected 1 message to have been sent to the queue named in the unstowed task message's 'to' field", 1,
                      queueServices.getUnstowedTaskQueueMessages().size());
-        // TODO check task message
+
+        final TaskMessage unstowedTaskMessage
+            = OBJECT_MAPPER.readValue(queueServices.getUnstowedTaskQueueMessages().get(0), TaskMessage.class);
+        assertNotNull("Unable to convert unstowed task message to an instance of TaskMessage", unstowedTaskMessage);
+
+        // Single value task message fields
+        assertEquals("Unstowed task message has unexpected taskApiVersion",
+                     1, unstowedTaskMessage.getTaskApiVersion());
+        assertEquals("Unstowed task message has unexpected taskClassifier",
+                     "DocumentWorkerTask", unstowedTaskMessage.getTaskClassifier());
+        assertEquals("Unstowed task message has unexpected taskStatus",
+                     TaskStatus.NEW_TASK, unstowedTaskMessage.getTaskStatus());
+        assertEquals("Unstowed task message has unexpected to",
+                     TARGET_QUEUE_FOR_UNSTOWED_TASKS, unstowedTaskMessage.getTo());
+        assertEquals("Unstowed task message has unexpected correlationId",
+                     "1", unstowedTaskMessage.getCorrelationId());
+
+        // taskData
+        final DocumentWorkerDocumentTask unstowedTaskMessageTaskData
+            = OBJECT_MAPPER.readValue(unstowedTaskMessage.getTaskData(), DocumentWorkerDocumentTask.class);
+        assertNotNull("Unable to convert unstowed task message's taskData to an instance of DocumentWorkerDocumentTask",
+                      unstowedTaskMessageTaskData);
+        assertNotNull("Unstowed task message should have a non-null document", unstowedTaskMessageTaskData.document);
+        assertEquals("Unstowed task message has unexpected value for the TENANT field in it's document",
+                     tenant2PartitionId, unstowedTaskMessageTaskData.document.fields.get("TENANT").get(0).data);
+
+        // tracking
+        final TrackingInfo unstowedTaskMessageTracking = unstowedTaskMessage.getTracking();
+        assertNotNull("Unstowed task message should have a non-null tracking property", unstowedTaskMessageTracking);
+        assertEquals("Unstowed task message has unexpected value for tracking.jobTaskId",
+                     tenant2PartitionId + ":" + tenant2JobId, unstowedTaskMessageTracking.getJobTaskId());
+        assertEquals("Unstowed task message has unexpected value for tracking.lastStatusCheckTime",
+                      ONE_DAY_AGO, unstowedTaskMessageTracking.getLastStatusCheckTime());
+        assertEquals("Unstowed task message has unexpected value for tracking.statusCheckIntervalMillis",
+                     TWO_MINUTES_IN_MILLIS, unstowedTaskMessageTracking.getStatusCheckIntervalMillis());
+        assertEquals("Unstowed task message has unexpected value for tracking.statusCheckUrl",
+                     "dummy-url", unstowedTaskMessageTracking.getStatusCheckUrl());
+        assertEquals("Unstowed task message has unexpected value for tracking.trackingPipe",
+                     TARGET_QUEUE_FOR_UNSTOWED_TASKS, unstowedTaskMessageTracking.getTrackingPipe());
+        assertNull("Unstowed task message should have a null tracking.trackTo field", unstowedTaskMessageTracking.getTrackTo());
+
+        // context
+        assertEquals("Unstowed task message has unexpected context",
+                     Collections.<String, byte[]>emptyMap(), unstowedTaskMessage.getContext());
+
+        // sourceInfo
+        assertNull("Unstowed task message should have a null sourceInfo property", unstowedTaskMessage.getSourceInfo());
+
+    }
+
+    @Test
+    public void testPartitionIdMissingFromCustomData() throws IOException, InterruptedException, Exception
+    {
+        // Given a database with a stowed task message
+        final String tenant1PartitionId = "tenant1";
+        final String tenant1JobId = "job1";
+        final DocumentWorkerDocumentTask tenant1DocumentWorkerDocumentTask = new DocumentWorkerDocumentTask();
+        tenant1DocumentWorkerDocumentTask.document = createSampleDocumentWithField("TENANT", tenant1PartitionId);
+        final byte[] tenant1TaskDataBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1DocumentWorkerDocumentTask);
+
+        final TrackingInfo tenant1TrackingInfo = new TrackingInfo(
+            tenant1PartitionId + ":" + tenant1JobId,
+            ONE_DAY_AGO,
+            TWO_MINUTES_IN_MILLIS,
+            "dummy-url",
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
+            null);
+        final byte[] tenant1TrackingInfoBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1TrackingInfo);
+
+        integrationTestDatabaseClient.insertStowedTask(
+            tenant1PartitionId,
+            tenant1JobId,
+            "DocumentWorkerTask",
+            1,
+            tenant1TaskDataBytes,
+            "NEW_TASK",
+            OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS, tenant1TrackingInfoBytes, null, "1");
+
+        integrationTestDatabaseClient.waitUntilStowedTaskTableContains(1, 30000);
+
+        // When a resume job message without a partitionId in custom data is sent to the worker
+        final DocumentWorkerDocumentTask documentWorkerDocumentTask = new DocumentWorkerDocumentTask();
+        documentWorkerDocumentTask.customData = new HashMap<>();
+        documentWorkerDocumentTask.customData.put("jobId", tenant1JobId);
+        // No partitionId set on customDaata
+
+        final TaskMessage resumeJobTaskMessage = new TaskMessage(
+            UUID.randomUUID().toString(),
+            "DocumentWorkerTask",
+            2,
+            OBJECT_MAPPER.writeValueAsBytes(documentWorkerDocumentTask),
+            TaskStatus.NEW_TASK,
+            Collections.<String, byte[]>emptyMap(),
+            WORKER_TASKUNSTOWING_IN_QUEUE,
+            null,
+            null,
+            "1");
+
+        queueServices.startListening();
+        queueServices.sendTaskMessage(resumeJobTaskMessage);
+
+        // Then the task should have been sent to the worker's error queue
+        queueServices.waitForErrorQueueMessages(1, 30000);
+        assertEquals("Expected 1 message to have been sent to the workers error queue", 1,
+                     queueServices.getErrorQueueMessages().size());
+
+        // And the task should NOT have been removed from the database
+        integrationTestDatabaseClient.waitUntilStowedTaskTableContains(1, 30000);
+    }
+
+    @Test
+    public void testJobIdMissingFromCustomData() throws IOException, InterruptedException, Exception
+    {
+        // Given a database with a stowed task message
+        final String tenant1PartitionId = "tenant1";
+        final String tenant1JobId = "job1";
+        final DocumentWorkerDocumentTask tenant1DocumentWorkerDocumentTask = new DocumentWorkerDocumentTask();
+        tenant1DocumentWorkerDocumentTask.document = createSampleDocumentWithField("TENANT", tenant1PartitionId);
+        final byte[] tenant1TaskDataBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1DocumentWorkerDocumentTask);
+
+        final TrackingInfo tenant1TrackingInfo = new TrackingInfo(
+            tenant1PartitionId + ":" + tenant1JobId,
+            ONE_DAY_AGO,
+            TWO_MINUTES_IN_MILLIS,
+            "dummy-url",
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
+            null);
+        final byte[] tenant1TrackingInfoBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1TrackingInfo);
+
+        integrationTestDatabaseClient.insertStowedTask(
+            tenant1PartitionId,
+            tenant1JobId,
+            "DocumentWorkerTask",
+            1,
+            tenant1TaskDataBytes,
+            "NEW_TASK",
+            OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS, tenant1TrackingInfoBytes, null, "1");
+
+        integrationTestDatabaseClient.waitUntilStowedTaskTableContains(1, 30000);
+
+        // When a resume job message without a jobId in custom data is sent to the worker
+        final DocumentWorkerDocumentTask documentWorkerDocumentTask = new DocumentWorkerDocumentTask();
+        documentWorkerDocumentTask.customData = new HashMap<>();
+        documentWorkerDocumentTask.customData.put("partitionId", tenant1PartitionId);
+        // No jobId set on customData
+
+        final TaskMessage resumeJobTaskMessage = new TaskMessage(
+            UUID.randomUUID().toString(),
+            "DocumentWorkerTask",
+            2,
+            OBJECT_MAPPER.writeValueAsBytes(documentWorkerDocumentTask),
+            TaskStatus.NEW_TASK,
+            Collections.<String, byte[]>emptyMap(),
+            WORKER_TASKUNSTOWING_IN_QUEUE,
+            null,
+            null,
+            "1");
+
+        queueServices.startListening();
+        queueServices.sendTaskMessage(resumeJobTaskMessage);
+
+        // Then the task should have been sent to the worker's error queue
+        queueServices.waitForErrorQueueMessages(1, 30000);
+        assertEquals("Expected 1 message to have been sent to the workers error queue", 1,
+                     queueServices.getErrorQueueMessages().size());
+
+        // And the task should NOT have been removed from the database
+        integrationTestDatabaseClient.waitUntilStowedTaskTableContains(1, 30000);
     }
 
     private static DocumentWorkerDocument createSampleDocumentWithField(final String fieldKey, final String fieldValue)
