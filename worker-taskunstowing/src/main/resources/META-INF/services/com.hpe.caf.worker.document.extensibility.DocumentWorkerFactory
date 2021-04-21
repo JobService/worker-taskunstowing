@@ -1,1 +1,1 @@
-com.microfocus.caf.worker.taskunstowing.factory.TaskUnstowingWorkerFactory
+com.github.jobservice.workers.taskunstowing.factory.TaskUnstowingWorkerFactory
