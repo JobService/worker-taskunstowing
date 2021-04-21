@@ -32,10 +32,17 @@ interface StowedTaskDAO
         + TASK_STATUS + ", "
         + CONTEXT + ", \""
         + TO + "\", "
-        + TRACKING_INFO + ", "
+        + TRACKING_INFO_JOB_TASK_ID + ", "
+        + TRACKING_INFO_LAST_STATUS_CHECK_TIME + ", "
+        + TRACKING_INFO_STATUS_CHECK_INTERVAL_MILLIS + ", "
+        + TRACKING_INFO_STATUS_CHECK_URL + ", "
+        + TRACKING_INFO_TRACKING_PIPE + ", "
+        + TRACKING_INFO_TRACK_TO + ", "
         + SOURCE_INFO + ", "
         + CORRELATION_ID + ") values "
-        + "(:partitionId, :jobId, :taskClassifier, :taskApiVersion, :taskData, :taskStatus, :context, :to, :trackingInfo, :sourceInfo, :correlationId)")
+        + "(:partitionId, :jobId, :taskClassifier, :taskApiVersion, :taskData, :taskStatus, :context, :to, :trackingInfoJobTaskId, "
+        + ":trackingInfoLastStatusCheckTime, :trackingInfoStatusCheckIntervalMillis, :trackingInfoStatusCheckUrl, "
+        + ":trackingInfoTrackingPipe, :trackingInfoTrackTo, :sourceInfo, :correlationId)")
     void insertStowedTask(@Define("table") final String table,
                           @Bind("partitionId") final String partitionId,
                           @Bind("jobId") final String jobId,
@@ -45,7 +52,12 @@ interface StowedTaskDAO
                           @Bind("taskStatus") final String taskStatus,
                           @Bind("context") final byte[] context,
                           @Bind("to") final String to,
-                          @Bind("trackingInfo") final byte[] trackingInfo,
+                          @Bind("trackingInfoJobTaskId") final String trackingInfoJobTaskId,
+                          @Bind("trackingInfoLastStatusCheckTime") final Long trackingInfoLastStatusCheckTime,
+                          @Bind("trackingInfoStatusCheckIntervalMillis") final Long trackingInfoStatusCheckIntervalMillis,
+                          @Bind("trackingInfoStatusCheckUrl") final String trackingInfoStatusCheckUrl,
+                          @Bind("trackingInfoTrackingPipe") final String trackingInfoTrackingPipe,
+                          @Bind("trackingInfoTrackTo") final String trackingInfoTrackTo,
                           @Bind("sourceInfo") final byte[] sourceInfo,
                           @Bind("correlationId") final String correlationId);
 }

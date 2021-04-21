@@ -27,7 +27,6 @@ import com.hpe.caf.worker.document.DocumentWorkerFieldValue;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -38,9 +37,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import static com.fasterxml.jackson.databind.DeserializationFeature.*;
-import java.time.LocalDate;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertNotNull;
 import static org.testng.AssertJUnit.assertNull;
@@ -53,7 +50,7 @@ public class TaskUnstowingWorkerIT
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
     private static final String WORKER_TASKUNSTOWING_IN_QUEUE = "worker-taskunstowing-in";
     private static final String TARGET_QUEUE_FOR_UNSTOWED_TASKS = "dataprocessing-elasticquery-in";
-    private static final Date ONE_DAY_AGO = java.sql.Date.valueOf(LocalDate.now().minusDays(1));
+    private static final Date ONE_DAY_AGO = new Date(System.currentTimeMillis() - 1 * 24 * 3600 * 1000);
     private static final long TWO_MINUTES_IN_MILLIS = 120000L;
 
     private final IntegrationTestDatabaseClient integrationTestDatabaseClient = new IntegrationTestDatabaseClient();
@@ -84,15 +81,6 @@ public class TaskUnstowingWorkerIT
         tenant1DocumentWorkerDocumentTask.document = createSampleDocumentWithField("TENANT", tenant1PartitionId);
         final byte[] tenant1TaskDataBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1DocumentWorkerDocumentTask);
 
-        final TrackingInfo tenant1TrackingInfo = new TrackingInfo(
-            tenant1PartitionId + ":" + tenant1JobId,
-            ONE_DAY_AGO,
-            TWO_MINUTES_IN_MILLIS,
-            "dummy-url",
-            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
-            null);
-        final byte[] tenant1TrackingInfoBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1TrackingInfo);
-
         integrationTestDatabaseClient.insertStowedTask(
             tenant1PartitionId,
             tenant1JobId,
@@ -102,7 +90,12 @@ public class TaskUnstowingWorkerIT
             "NEW_TASK",
             OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
             TARGET_QUEUE_FOR_UNSTOWED_TASKS,
-            tenant1TrackingInfoBytes,
+            tenant1PartitionId + ":" + tenant1JobId,
+            ONE_DAY_AGO.getTime(),
+            TWO_MINUTES_IN_MILLIS,
+            "dummy-url",
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
+            null,
             null,
             "1");
 
@@ -111,15 +104,6 @@ public class TaskUnstowingWorkerIT
         final DocumentWorkerDocumentTask tenant2DocumentWorkerDocumentTask = new DocumentWorkerDocumentTask();
         tenant2DocumentWorkerDocumentTask.document = createSampleDocumentWithField("TENANT", tenant2PartitionId);
         final byte[] tenant2TaskDataBytes = OBJECT_MAPPER.writeValueAsBytes(tenant2DocumentWorkerDocumentTask);
-
-        final TrackingInfo tenant2TrackingInfo = new TrackingInfo(
-            tenant2PartitionId + ":" + tenant2JobId,
-            ONE_DAY_AGO,
-            TWO_MINUTES_IN_MILLIS,
-            "dummy-url",
-            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
-            null);
-        final byte[] tenant2TrackingInfoBytes = OBJECT_MAPPER.writeValueAsBytes(tenant2TrackingInfo);
 
         integrationTestDatabaseClient.insertStowedTask(
             tenant2PartitionId,
@@ -130,7 +114,12 @@ public class TaskUnstowingWorkerIT
             "NEW_TASK",
             OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
             TARGET_QUEUE_FOR_UNSTOWED_TASKS,
-            tenant2TrackingInfoBytes,
+            tenant2PartitionId + ":" + tenant2JobId,
+            ONE_DAY_AGO.getTime(),
+            TWO_MINUTES_IN_MILLIS,
+            "dummy-url",
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
+            null,
             null,
             "1");
 
@@ -196,7 +185,7 @@ public class TaskUnstowingWorkerIT
         assertEquals("Unstowed task message has unexpected value for tracking.jobTaskId",
                      tenant2PartitionId + ":" + tenant2JobId, unstowedTaskMessageTracking.getJobTaskId());
         assertEquals("Unstowed task message has unexpected value for tracking.lastStatusCheckTime",
-                      ONE_DAY_AGO, unstowedTaskMessageTracking.getLastStatusCheckTime());
+                     ONE_DAY_AGO, unstowedTaskMessageTracking.getLastStatusCheckTime());
         assertEquals("Unstowed task message has unexpected value for tracking.statusCheckIntervalMillis",
                      TWO_MINUTES_IN_MILLIS, unstowedTaskMessageTracking.getStatusCheckIntervalMillis());
         assertEquals("Unstowed task message has unexpected value for tracking.statusCheckUrl",
@@ -224,15 +213,6 @@ public class TaskUnstowingWorkerIT
         tenant1DocumentWorkerDocumentTask.document = createSampleDocumentWithField("TENANT", tenant1PartitionId);
         final byte[] tenant1TaskDataBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1DocumentWorkerDocumentTask);
 
-        final TrackingInfo tenant1TrackingInfo = new TrackingInfo(
-            tenant1PartitionId + ":" + tenant1JobId,
-            ONE_DAY_AGO,
-            TWO_MINUTES_IN_MILLIS,
-            "dummy-url",
-            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
-            null);
-        final byte[] tenant1TrackingInfoBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1TrackingInfo);
-
         integrationTestDatabaseClient.insertStowedTask(
             tenant1PartitionId,
             tenant1JobId,
@@ -241,7 +221,15 @@ public class TaskUnstowingWorkerIT
             tenant1TaskDataBytes,
             "NEW_TASK",
             OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
-            TARGET_QUEUE_FOR_UNSTOWED_TASKS, tenant1TrackingInfoBytes, null, "1");
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
+            tenant1PartitionId + ":" + tenant1JobId,
+            ONE_DAY_AGO.getTime(),
+            TWO_MINUTES_IN_MILLIS,
+            "dummy-url",
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
+            null,
+            null,
+            "1");
 
         integrationTestDatabaseClient.waitUntilStowedTaskTableContains(1, 30000);
 
@@ -285,15 +273,6 @@ public class TaskUnstowingWorkerIT
         tenant1DocumentWorkerDocumentTask.document = createSampleDocumentWithField("TENANT", tenant1PartitionId);
         final byte[] tenant1TaskDataBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1DocumentWorkerDocumentTask);
 
-        final TrackingInfo tenant1TrackingInfo = new TrackingInfo(
-            tenant1PartitionId + ":" + tenant1JobId,
-            ONE_DAY_AGO,
-            TWO_MINUTES_IN_MILLIS,
-            "dummy-url",
-            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
-            null);
-        final byte[] tenant1TrackingInfoBytes = OBJECT_MAPPER.writeValueAsBytes(tenant1TrackingInfo);
-
         integrationTestDatabaseClient.insertStowedTask(
             tenant1PartitionId,
             tenant1JobId,
@@ -302,7 +281,15 @@ public class TaskUnstowingWorkerIT
             tenant1TaskDataBytes,
             "NEW_TASK",
             OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
-            TARGET_QUEUE_FOR_UNSTOWED_TASKS, tenant1TrackingInfoBytes, null, "1");
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
+            tenant1PartitionId + ":" + tenant1JobId,
+            ONE_DAY_AGO.getTime(),
+            TWO_MINUTES_IN_MILLIS,
+            "dummy-url",
+            TARGET_QUEUE_FOR_UNSTOWED_TASKS,
+            null,
+            null,
+            "1");
 
         integrationTestDatabaseClient.waitUntilStowedTaskTableContains(1, 30000);
 

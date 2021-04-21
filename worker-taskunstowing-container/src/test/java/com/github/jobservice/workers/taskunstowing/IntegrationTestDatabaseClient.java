@@ -36,7 +36,7 @@ final class IntegrationTestDatabaseClient
             .installPlugin(new PostgresPlugin())
             .installPlugin(new SqlObjectPlugin());
     }
-    
+
     public void insertStowedTask(
         final String partitionId,
         final String jobId,
@@ -46,7 +46,12 @@ final class IntegrationTestDatabaseClient
         final String taskStatus,
         final byte[] context,
         final String to,
-        final byte[] trackingInfo,
+        final String trackingInfoJobTaskId,
+        final Long trackingInfoLastStatusCheckTime,
+        final Long trackingInfoStatusCheckIntervalMillis,
+        final String trackingInfoStatusCheckUrl,
+        final String trackingInfoTrackingPipe,
+        final String trackingInfoTrackTo,
         final byte[] sourceInfo,
         final String correlationId) throws Exception
     {
@@ -62,7 +67,12 @@ final class IntegrationTestDatabaseClient
                 taskStatus,
                 context,
                 to,
-                trackingInfo,
+                trackingInfoJobTaskId,
+                trackingInfoLastStatusCheckTime,
+                trackingInfoStatusCheckIntervalMillis,
+                trackingInfoStatusCheckUrl,
+                trackingInfoTrackingPipe,
+                trackingInfoTrackTo,
                 sourceInfo,
                 correlationId);
         });

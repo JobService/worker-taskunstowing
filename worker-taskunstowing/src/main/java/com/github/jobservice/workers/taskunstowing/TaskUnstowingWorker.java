@@ -32,6 +32,7 @@ import com.github.jobservice.workers.taskunstowing.database.DatabaseExceptionChe
 import com.github.jobservice.workers.taskunstowing.database.StowedTaskRow;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -115,23 +116,24 @@ public final class TaskUnstowingWorker implements DocumentWorker
             } catch (final IOException exception) {
                 final TaskUnstowingWorkerFailure failure = new TaskUnstowingWorkerFailure(
                     TaskUnstowingWorkerFailure.FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE_ID,
-                    String.format("Failed to convert database row with id %s to task message", stowedTaskRow.getId()));
+                    String.format("Failed to convert database row with partition id {}, job id {} and job task id {} to task message",
+                                  stowedTaskRow.getPartitionId(), stowedTaskRow.getJobId(), stowedTaskRow.getTrackingInfoJobTaskId()));
                 processFailure(failure, exception, document);
                 continue;
             }
 
             try {
                 workerTaskData.sendMessage(taskMessage);
-                LOGGER.info("Sent unstowed task message with database id %s, partition id {} and job id {} to queue {}",
-                            stowedTaskRow.getId(), partitionId, jobId, taskMessage.getTo());
+                LOGGER.info("Sent unstowed task message with partition id {}, job id {} and job task id {} to queue {}",
+                            partitionId, jobId, taskMessage.getTracking().getJobTaskId(), taskMessage.getTo());
                 try {
                     databaseClient.deleteStowedTask(partitionId, jobId);
                 } catch (final Exception exception) {
                     final TaskUnstowingWorkerFailure failure = new TaskUnstowingWorkerFailure(
                         TaskUnstowingWorkerFailure.FAILED_TO_DELETE_UNSTOWED_TASK_MESSAGE_FROM_DATABASE_ID,
-                        String.format("Sent unstowed task message with database id %s, partition id %s and job id %s to queue %s, but "
-                            + "failed to delete unstowed task message from database", stowedTaskRow.getId(), partitionId, jobId,
-                                      taskMessage.getTo()));
+                        String.format("Sent unstowed task message with partition id %s, job id %s and job task id %s to queue %s, but "
+                            + "failed to delete unstowed task message from database", partitionId, jobId,
+                                      taskMessage.getTracking().getJobTaskId(), taskMessage.getTo()));
                     if (DatabaseExceptionChecker.isTransientException(exception)) {
                         LOGGER.error(failure.getFailureMsg(), exception);
                         throw new DocumentWorkerTransientException(failure.getFailureMsg(), exception);
@@ -142,8 +144,8 @@ public final class TaskUnstowingWorker implements DocumentWorker
             } catch (final Exception exception) {
                 final TaskUnstowingWorkerFailure failure = new TaskUnstowingWorkerFailure(
                     TaskUnstowingWorkerFailure.FAILED_TO_SEND_UNSTOWED_TASK_MESSAGE_TO_QUEUE_ID,
-                    String.format("Failed to send unstowed task message with database id %s, partition id %s and job id %s to queue %s",
-                                  stowedTaskRow.getId(), partitionId, jobId, taskMessage.getTo()));
+                    String.format("Failed to send unstowed task message with partition id %s, job id %s and job task id %s to queue %s",
+                                  partitionId, jobId, taskMessage.getTracking().getJobTaskId(), taskMessage.getTo()));
                 processFailure(failure, exception, document);
             }
         }
@@ -168,6 +170,14 @@ public final class TaskUnstowingWorker implements DocumentWorker
 
     private static TaskMessage convertStowedTaskRowToTaskMessage(final StowedTaskRow stowedTaskRow) throws IOException
     {
+        final TrackingInfo trackingInfo = new TrackingInfo(
+            stowedTaskRow.getTrackingInfoJobTaskId(),
+            new Date(stowedTaskRow.getTrackingInfoLastStatusCheckTime()),
+            stowedTaskRow.getTrackingInfoStatusCheckIntervalMillis(),
+            stowedTaskRow.getTrackingInfoStatusCheckUrl(),
+            stowedTaskRow.getTrackingInfoTrackingPipe(),
+            stowedTaskRow.getTrackingInfoTrackTo());
+
         return new TaskMessage(
             UUID.randomUUID().toString(),
             stowedTaskRow.getTaskClassifier(),
@@ -178,7 +188,7 @@ public final class TaskUnstowingWorker implements DocumentWorker
             ? OBJECT_MAPPER.readValue(stowedTaskRow.getContext(), Map.class)
             : Collections.<String, byte[]>emptyMap(),
             stowedTaskRow.getTo(),
-            stowedTaskRow.getTrackingInfo() != null ? OBJECT_MAPPER.readValue(stowedTaskRow.getTrackingInfo(), TrackingInfo.class) : null,
+            trackingInfo,
             stowedTaskRow.getSourceInfo() != null ? OBJECT_MAPPER.readValue(stowedTaskRow.getSourceInfo(), TaskSourceInfo.class) : null,
             stowedTaskRow.getCorrelationId());
     }
