@@ -38,7 +38,7 @@ public final class TaskUnstowingWorkerFactory implements DocumentWorkerFactory
             configuration = configurationSource.getConfiguration(TaskUnstowingWorkerConfiguration.class);
         } catch (final ConfigurationException e) {
             LOGGER.error("Failed to load Task Unstowing Worker configuration", e);
-            return null;
+            return new UnhealthyWorker(e.getMessage());
         }
         return new TaskUnstowingWorker(new DatabaseClient(configuration));
     }

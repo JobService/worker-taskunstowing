@@ -43,21 +43,21 @@ interface StowedTaskDAO
         + "(:partitionId, :jobId, :taskClassifier, :taskApiVersion, :taskData, :taskStatus, :context, :to, :trackingInfoJobTaskId, "
         + ":trackingInfoLastStatusCheckTime, :trackingInfoStatusCheckIntervalMillis, :trackingInfoStatusCheckUrl, "
         + ":trackingInfoTrackingPipe, :trackingInfoTrackTo, :sourceInfo, :correlationId)")
-    void insertStowedTask(@Define("table") final String table,
-                          @Bind("partitionId") final String partitionId,
-                          @Bind("jobId") final String jobId,
-                          @Bind("taskClassifier") final String taskClassifier,
-                          @Bind("taskApiVersion") final Integer taskApiVersion,
-                          @Bind("taskData") final byte[] taskData,
-                          @Bind("taskStatus") final String taskStatus,
-                          @Bind("context") final byte[] context,
-                          @Bind("to") final String to,
-                          @Bind("trackingInfoJobTaskId") final String trackingInfoJobTaskId,
-                          @Bind("trackingInfoLastStatusCheckTime") final Long trackingInfoLastStatusCheckTime,
-                          @Bind("trackingInfoStatusCheckIntervalMillis") final Long trackingInfoStatusCheckIntervalMillis,
-                          @Bind("trackingInfoStatusCheckUrl") final String trackingInfoStatusCheckUrl,
-                          @Bind("trackingInfoTrackingPipe") final String trackingInfoTrackingPipe,
-                          @Bind("trackingInfoTrackTo") final String trackingInfoTrackTo,
-                          @Bind("sourceInfo") final byte[] sourceInfo,
-                          @Bind("correlationId") final String correlationId);
+    void insertStowedTask(@Define("table") String table,
+                          @Bind("partitionId") String partitionId,
+                          @Bind("jobId") String jobId,
+                          @Bind("taskClassifier") String taskClassifier,
+                          @Bind("taskApiVersion") Integer taskApiVersion,
+                          @Bind("taskData") byte[] taskData,
+                          @Bind("taskStatus") String taskStatus,
+                          @Bind("context") byte[] context,
+                          @Bind("to") String to,
+                          @Bind("trackingInfoJobTaskId") String trackingInfoJobTaskId,
+                          @Bind("trackingInfoLastStatusCheckTime") Long trackingInfoLastStatusCheckTime,
+                          @Bind("trackingInfoStatusCheckIntervalMillis") Long trackingInfoStatusCheckIntervalMillis,
+                          @Bind("trackingInfoStatusCheckUrl") String trackingInfoStatusCheckUrl,
+                          @Bind("trackingInfoTrackingPipe") String trackingInfoTrackingPipe,
+                          @Bind("trackingInfoTrackTo") String trackingInfoTrackTo,
+                          @Bind("sourceInfo") byte[] sourceInfo,
+                          @Bind("correlationId") String correlationId);
 }

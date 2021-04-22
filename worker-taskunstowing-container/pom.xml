@@ -48,10 +48,6 @@
             <artifactId>worker-document</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.cafdataprocessing</groupId>
-            <artifactId>worker-document-shared</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.github.workerframework</groupId>
             <artifactId>standard-worker-container</artifactId>
             <type>pom</type>
@@ -60,11 +56,11 @@
             <groupId>com.github.jobservice.workers.taskunstowing</groupId>
             <artifactId>worker-taskunstowing</artifactId>
         </dependency>
-        
+
         <!-- Runtime dependencies -->
         <dependency>
-            <groupId>com.github.cafapi.logging</groupId>
-            <artifactId>caf-logging-logback</artifactId>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-postgres</artifactId>
             <scope>runtime</scope>
         </dependency>
 
@@ -87,10 +83,7 @@
         <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-sqlobject</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.jdbi</groupId>
-            <artifactId>jdbi3-postgres</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>

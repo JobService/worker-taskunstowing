@@ -20,15 +20,30 @@ import com.hpe.caf.worker.document.model.Document;
 
 import java.text.MessageFormat;
 
-final class TaskUnstowingWorkerFailure
+enum TaskUnstowingWorkerFailure
 {
-    public static final String PARTITION_ID_MISSING_FROM_CUSTOM_DATA_ID = "TUW-001";
-    public static final String JOB_ID_MISSING_FROM_CUSTOM_DATA_ID = "TUW-002";
-    public static final String FAILED_TO_GET_WORKER_TASK_DATA_ID = "TUW-003";
-    public static final String FAILED_TO_READ_FROM_DATABASE_ID = "TUW-004";
-    public static final String FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE_ID = "TUW-005";
-    public static final String FAILED_TO_DELETE_UNSTOWED_TASK_MESSAGE_FROM_DATABASE_ID = "TUW-006";
-    public static final String FAILED_TO_SEND_UNSTOWED_TASK_MESSAGE_TO_QUEUE_ID = "TUW-007";
+    PARTITION_ID_MISSING_FROM_CUSTOM_DATA_ID(
+        "TUW-001",
+        "Custom data should contain a non-empty 'partitionId' property"),
+    JOB_ID_MISSING_FROM_CUSTOM_DATA_ID(
+        "TUW-002",
+        "Custom data should contain a non-empty 'jobId' property"),
+    FAILED_TO_GET_WORKER_TASK_DATA_ID(
+        "TUW-003",
+        "Failed to get worker task data"),
+    FAILED_TO_READ_FROM_DATABASE_ID(
+        "TUW-004",
+        "Failed to read stowed task(s) for partition id {0} and job id {1} from database"),
+    FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE_ID(
+        "TUW-005",
+        "Failed to convert database row with partition id {0}, job id {1} and job task id {2} to task message"),
+    FAILED_TO_SEND_UNSTOWED_TASK_MESSAGE_TO_QUEUE_ID(
+        "TUW-006",
+        "Failed to send unstowed task message with partition id {0}, job id {1} and job task id {2} to queue {3}"),
+    FAILED_TO_DELETE_UNSTOWED_TASK_MESSAGE_FROM_DATABASE_ID(
+        "TUW-007",
+        "Sent unstowed task message with partition id {0}, job id {1} and job task id {2} to queue {3}, but failed to delete unstowed "
+        + "task message from database");
 
     private final String failureId;
     private final String failureMsg;
@@ -39,19 +54,14 @@ final class TaskUnstowingWorkerFailure
         this.failureMsg = failureMsg;
     }
 
-    public String getFailureMsg()
-    {
-        return failureMsg;
-    }
-
     public void addToDoc(final Document document)
     {
         document.addFailure(failureId, failureMsg);
     }
 
-    public void addToDoc(final Document document, final String context, final Throwable cause)
+    public void addToDoc(final Document document, final Throwable cause, final Object... arguments)
     {
-        document.getFailures().add(failureId, MessageFormat.format(failureMsg, context), cause);
+        document.getFailures().add(failureId, MessageFormat.format(failureMsg, arguments), cause);
     }
 
     public void addToDoc(final Document document, final Throwable cause)
@@ -65,6 +75,14 @@ final class TaskUnstowingWorkerFailure
         return MoreObjects.toStringHelper(this)
             .add("failureId", failureId)
             .add("failureMsg", failureMsg)
+            .toString();
+    }
+
+    public String toString(final Object... arguments)
+    {
+        return MoreObjects.toStringHelper(this)
+            .add("failureId", failureId)
+            .add("failureMsg", MessageFormat.format(failureMsg, arguments))
             .toString();
     }
 }

@@ -45,7 +45,8 @@ public final class DatabaseClient
     {
         return jdbi.withHandle(handle -> {
             return handle.createQuery(
-                "SELECT * FROM " + tableName + " WHERE " + PARTITION_ID + " = :partitionId AND " + JOB_ID + " = :jobId")
+                "SELECT * FROM <table> WHERE " + PARTITION_ID + " = :partitionId AND " + JOB_ID + " = :jobId")
+                .define("table", tableName)
                 .bind("partitionId", partitionId)
                 .bind("jobId", jobId)
                 .map(new StowedTaskRowMapper())
@@ -53,13 +54,16 @@ public final class DatabaseClient
         });
     }
 
-    public void deleteStowedTask(final String partitionId, final String jobId) throws Exception
+    public void deleteStowedTask(final String partitionId, final String jobId, final String jobTaskId) throws Exception
     {
         jdbi.useHandle(handle -> {
             handle.createUpdate(
-                "DELETE FROM " + tableName + " WHERE " + PARTITION_ID + " = :partitionId AND " + JOB_ID + " = :jobId")
+                "DELETE FROM <table> WHERE " + PARTITION_ID + " = :partitionId AND " + JOB_ID + " = :jobId AND "
+                + TRACKING_INFO_JOB_TASK_ID + " = :jobTaskId")
+                .define("table", tableName)
                 .bind("partitionId", partitionId)
                 .bind("jobId", jobId)
+                .bind("jobTaskId", jobTaskId)
                 .execute();
         });
     }
