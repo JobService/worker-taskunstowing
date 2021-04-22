@@ -15,6 +15,7 @@
  */
 package com.github.jobservice.workers.taskunstowing;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.hpe.caf.api.worker.TaskMessage;
@@ -42,6 +43,10 @@ public final class TaskUnstowingWorker implements DocumentWorker
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskUnstowingWorker.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final TypeReference<Map<String, byte[]>> CONTEXT_TYPE_REFERENCE
+        = new TypeReference<Map<String, byte[]>>()
+    {
+    };
     private final DatabaseClient databaseClient;
 
     public TaskUnstowingWorker(final DatabaseClient databaseClient)
@@ -173,7 +178,7 @@ public final class TaskUnstowingWorker implements DocumentWorker
             stowedTaskRow.getTaskData(),
             TaskStatus.valueOf(stowedTaskRow.getTaskStatus()),
             stowedTaskRow.getContext() != null
-            ? OBJECT_MAPPER.readValue(stowedTaskRow.getContext(), Map.class)
+            ? OBJECT_MAPPER.readValue(stowedTaskRow.getContext(), CONTEXT_TYPE_REFERENCE)
             : Collections.<String, byte[]>emptyMap(),
             stowedTaskRow.getTo(),
             trackingInfo,

@@ -105,6 +105,14 @@ public class TaskUnstowingWorkerIT
         tenant2DocumentWorkerDocumentTask.document = createSampleDocumentWithField("TENANT", tenant2PartitionId);
         final byte[] tenant2TaskDataBytes = OBJECT_MAPPER.writeValueAsBytes(tenant2DocumentWorkerDocumentTask);
 
+        // The context key must be set to the servicePath of the worker (which is caf/worker), otherwise the context won't be passed to
+        // the worker:
+        // https://github.com/WorkerFramework/worker-framework/blob/develop/worker-core/src/main/java/com/hpe/caf/worker/core/WorkerTaskImpl.java#L124
+        final Map<String, byte[]> context = new HashMap<>();
+        final Map<String, String> contextContents = new HashMap<>();
+        contextContents.put("a-context-key", "a-context-value");
+        context.put("caf/worker", OBJECT_MAPPER.writeValueAsBytes(contextContents));
+
         integrationTestDatabaseClient.insertStowedTask(
             tenant2PartitionId,
             tenant2JobId,
@@ -112,7 +120,7 @@ public class TaskUnstowingWorkerIT
             1,
             tenant2TaskDataBytes,
             "NEW_TASK",
-            OBJECT_MAPPER.writeValueAsBytes(Collections.<String, byte[]>emptyMap()),
+            OBJECT_MAPPER.writeValueAsBytes(context),
             TARGET_QUEUE_FOR_UNSTOWED_TASKS,
             tenant2PartitionId + ":" + tenant2JobId,
             ONE_DAY_AGO.getTime(),
@@ -195,12 +203,14 @@ public class TaskUnstowingWorkerIT
         assertNull("Unstowed task message should have a null tracking.trackTo field", unstowedTaskMessageTracking.getTrackTo());
 
         // context
-        assertEquals("Unstowed task message has unexpected context",
-                     Collections.<String, byte[]>emptyMap(), unstowedTaskMessage.getContext());
-
-        // sourceInfo
-        assertNull("Unstowed task message should have a null sourceInfo property", unstowedTaskMessage.getSourceInfo());
-
+        final Map<String, byte[]> unstowedTaskMessageContext = unstowedTaskMessage.getContext();
+        assertEquals("Unstowed task message has unexpected context map size", 1, unstowedTaskMessageContext.size());
+        final byte[] unstowedTaskMessageContextContentsBytes = unstowedTaskMessageContext.get("caf/worker");
+        assertNotNull("Unstowed task message context map should have a non-null value for the 'caf/worker' key",
+                      unstowedTaskMessageContextContentsBytes);
+        final Map unstowedTaskMessageContextContents = OBJECT_MAPPER.readValue(unstowedTaskMessageContextContentsBytes, Map.class);
+        assertEquals("Unstowed task message has unexpected value for context.caf/worker.a-context-key", "a-context-value",
+                     unstowedTaskMessageContextContents.get("a-context-key"));
     }
 
     @Test
