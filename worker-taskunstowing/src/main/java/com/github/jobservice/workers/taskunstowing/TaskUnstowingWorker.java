@@ -43,10 +43,6 @@ public final class TaskUnstowingWorker implements DocumentWorker
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskUnstowingWorker.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final TypeReference<Map<String, byte[]>> CONTEXT_TYPE_REFERENCE
-        = new TypeReference<Map<String, byte[]>>()
-    {
-    };
     private final DatabaseClient databaseClient;
 
     public TaskUnstowingWorker(final DatabaseClient databaseClient)
@@ -177,9 +173,7 @@ public final class TaskUnstowingWorker implements DocumentWorker
             stowedTaskRow.getTaskApiVersion(),
             stowedTaskRow.getTaskData(),
             TaskStatus.valueOf(stowedTaskRow.getTaskStatus()),
-            stowedTaskRow.getContext() != null
-            ? OBJECT_MAPPER.readValue(stowedTaskRow.getContext(), CONTEXT_TYPE_REFERENCE)
-            : Collections.<String, byte[]>emptyMap(),
+            Collections.<String, byte[]>emptyMap(),
             stowedTaskRow.getTo(),
             trackingInfo,
             stowedTaskRow.getSourceInfo() != null ? OBJECT_MAPPER.readValue(stowedTaskRow.getSourceInfo(), TaskSourceInfo.class) : null,

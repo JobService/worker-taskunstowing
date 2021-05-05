@@ -29,8 +29,7 @@ interface StowedTaskDAO
         + TASK_CLASSIFIER + ", "
         + TASK_API_VERSION + ", "
         + TASK_DATA + ", "
-        + TASK_STATUS + ", "
-        + CONTEXT + ", \""
+        + TASK_STATUS + ", \""
         + TO + "\", "
         + TRACKING_INFO_JOB_TASK_ID + ", "
         + TRACKING_INFO_LAST_STATUS_CHECK_TIME + ", "
@@ -40,7 +39,7 @@ interface StowedTaskDAO
         + TRACKING_INFO_TRACK_TO + ", "
         + SOURCE_INFO + ", "
         + CORRELATION_ID + ") values "
-        + "(:partitionId, :jobId, :taskClassifier, :taskApiVersion, :taskData, :taskStatus, :context, :to, :trackingInfoJobTaskId, "
+        + "(:partitionId, :jobId, :taskClassifier, :taskApiVersion, :taskData, :taskStatus, :to, :trackingInfoJobTaskId, "
         + ":trackingInfoLastStatusCheckTime, :trackingInfoStatusCheckIntervalMillis, :trackingInfoStatusCheckUrl, "
         + ":trackingInfoTrackingPipe, :trackingInfoTrackTo, :sourceInfo, :correlationId)")
     void insertStowedTask(@Define("table") String table,
@@ -50,7 +49,6 @@ interface StowedTaskDAO
                           @Bind("taskApiVersion") Integer taskApiVersion,
                           @Bind("taskData") byte[] taskData,
                           @Bind("taskStatus") String taskStatus,
-                          @Bind("context") byte[] context,
                           @Bind("to") String to,
                           @Bind("trackingInfoJobTaskId") String trackingInfoJobTaskId,
                           @Bind("trackingInfoLastStatusCheckTime") Long trackingInfoLastStatusCheckTime,

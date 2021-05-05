@@ -21,7 +21,7 @@ Example input message:
     "taskApiVersion": 1,
     "taskData": "ew0KICAiY3VzdG9tRGF0YSI6IHsNCiAgICAicGFydGl0aW9uSWQiOiAiYWNtZS1jb3JwIiwNCiAgICAiam9iSWQiOiAiam9iLTEiDQogIH0NCn0=",
     "taskStatus": "NEW_TASK",
-    "context": 1,
+    "context": {},
     "to": "worker-taskunstowing-in",
     "tracking": null,
     "sourceInfo": null,
