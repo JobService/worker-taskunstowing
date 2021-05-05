@@ -20,6 +20,7 @@ import org.jdbi.v3.core.Jdbi;
 import java.util.List;
 import org.jdbi.v3.postgres.PostgresPlugin;
 import static com.github.jobservice.workers.taskunstowing.database.StowedTaskColumnName.*;
+import java.util.ArrayList;
 
 public final class DatabaseClient
 {
@@ -41,11 +42,11 @@ public final class DatabaseClient
         });
     }
 
-    public List<StowedTaskRow> getStowedTasks(final String partitionId, final String jobId) throws Exception
+    public List<StowedTaskRow> getStowedTasks(final String partitionId, final String jobId, final int maxRows) throws Exception
     {
         return jdbi.withHandle(handle -> {
             return handle.createQuery(
-                "SELECT * FROM <table> WHERE " + PARTITION_ID + " = :partitionId AND " + JOB_ID + " = :jobId")
+                "SELECT * FROM <table> WHERE " + PARTITION_ID + " = :partitionId AND " + JOB_ID + " = :jobId LIMIT " + maxRows)
                 .define("table", tableName)
                 .bind("partitionId", partitionId)
                 .bind("jobId", jobId)

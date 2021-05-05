@@ -77,6 +77,10 @@ and it's base64-decoded `taskData`:
     **Default**: `5`  
     **Description**: The maximum size that the connection pool is allowed to reach, including both idle and in-use connections.
 
+* `CAF_WORKER_TASKUNSTOWING_DATABASE_MAXIMUM_BATCH_SIZE`  
+    **Default**: `10`  
+    **Description**: The maximum number of database rows that will be read into memory and processed before more rows are read.
+
 #### Logging Configuration
 
 * `CAF_LOG_LEVEL`  

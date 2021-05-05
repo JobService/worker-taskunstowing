@@ -75,6 +75,8 @@ public class TaskUnstowingWorkerIT
     public void testUnstowTask() throws IOException, InterruptedException, Exception
     {
         // Given a database with 2 stowed task messages for 2 different tenants
+
+        // tenant1 stowed task
         final String tenant1PartitionId = "tenant1";
         final String tenant1JobId = "job1";
         final DocumentWorkerDocumentTask tenant1DocumentWorkerDocumentTask = new DocumentWorkerDocumentTask();
@@ -98,6 +100,7 @@ public class TaskUnstowingWorkerIT
             null,
             "1");
 
+        // tenant2 stowed task
         final String tenant2PartitionId = "tenant2";
         final String tenant2JobId = "job2";
         final DocumentWorkerDocumentTask tenant2DocumentWorkerDocumentTask = new DocumentWorkerDocumentTask();

@@ -31,10 +31,12 @@ import com.github.jobservice.workers.taskunstowing.database.DatabaseExceptionChe
 import com.github.jobservice.workers.taskunstowing.database.StowedTaskRow;
 import com.github.jobservice.workers.taskunstowing.queue.QueueServices;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,11 +45,13 @@ public final class TaskUnstowingWorker implements DocumentWorker
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskUnstowingWorker.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final DatabaseClient databaseClient;
+    private final int databaseMaximumBatchSize;
     private final QueueServices queueServices;
 
-    public TaskUnstowingWorker(final DatabaseClient databaseClient, final QueueServices queueServices)
+    public TaskUnstowingWorker(final DatabaseClient databaseClient, final int databaseMaximumBatchSize, final QueueServices queueServices)
     {
         this.databaseClient = databaseClient;
+        this.databaseMaximumBatchSize = databaseMaximumBatchSize;
         this.queueServices = queueServices;
     }
 
@@ -68,6 +72,7 @@ public final class TaskUnstowingWorker implements DocumentWorker
     {
         LOGGER.info("Received request to unstow task(s)");
 
+        // Validate document.
         final String partitionId = document.getCustomData("partitionId");
         if (Strings.isNullOrEmpty(partitionId)) {
             final TaskUnstowingWorkerFailure failure = TaskUnstowingWorkerFailure.PARTITION_ID_MISSING_FROM_CUSTOM_DATA_ID;
@@ -89,59 +94,106 @@ public final class TaskUnstowingWorker implements DocumentWorker
             return;
         }
 
-        LOGGER.info("Querying for stowed tasks for partition id {} and job id {}", partitionId, jobId);
-        final List<StowedTaskRow> stowedTaskRows;
+        // Fetch first batch of stowed tasks.
+        LOGGER.info(
+            "Fetching first batch (using max batch size {}) of stowed task(s) for partitionId={} and jobId={} from database",
+            databaseMaximumBatchSize, partitionId, jobId);
+        List<StowedTaskRow> stowedTaskRows;
         try {
-            stowedTaskRows = databaseClient.getStowedTasks(partitionId, jobId);
-            LOGGER.info("Found {} stowed task(s) for partition id {} and job id {}", stowedTaskRows.size(), partitionId, jobId);
+            stowedTaskRows = databaseClient.getStowedTasks(partitionId, jobId, databaseMaximumBatchSize);
+            LOGGER.info("Fetched {} stowed task(s) for partitionId={} and jobId={} from database",
+                        stowedTaskRows.size(), partitionId, jobId);
         } catch (final Exception exception) {
             final TaskUnstowingWorkerFailure failure = TaskUnstowingWorkerFailure.FAILED_TO_READ_FROM_DATABASE_ID;
             processFailure(failure, exception, document, partitionId, jobId);
             return;
         }
 
-        for (final StowedTaskRow stowedTaskRow : stowedTaskRows) {
-            final TaskMessage taskMessage;
-            try {
-                taskMessage = convertStowedTaskRowToTaskMessage(stowedTaskRow);
-            } catch (final IOException exception) {
-                final TaskUnstowingWorkerFailure failure = TaskUnstowingWorkerFailure.FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE_ID;
-                processFailure(failure, exception, document, stowedTaskRow.getPartitionId(), stowedTaskRow.getJobId(),
-                               stowedTaskRow.getTrackingInfoJobTaskId());
-                continue;
-            }
+        // Keep track of the stowed tasks that failed to be unstowed so that we can exclude them and don't get stuck in an infinite loop.
+        final List<StowedTaskRow> stowedTaskRowsToExclude = new ArrayList<>();
 
-            try {
-                queueServices.sendTaskMessage(taskMessage);
-                LOGGER.info("Sent unstowed task message with partition id {}, job id {} and job task id {} to queue {}",
-                            partitionId, jobId, taskMessage.getTracking().getJobTaskId(), taskMessage.getTo());
-            } catch (final Exception exception) {
-                final TaskUnstowingWorkerFailure failure = TaskUnstowingWorkerFailure.FAILED_TO_SEND_UNSTOWED_TASK_MESSAGE_TO_QUEUE_ID;
-                processFailure(failure, exception, document, partitionId, jobId, taskMessage.getTracking().getJobTaskId(),
-                               taskMessage.getTo());
-                continue;
-            }
-
-            try {
-                databaseClient.deleteStowedTask(partitionId, jobId, taskMessage.getTracking().getJobTaskId());
-            } catch (final Exception exception) {
-                final TaskUnstowingWorkerFailure failure
-                    = TaskUnstowingWorkerFailure.FAILED_TO_DELETE_UNSTOWED_TASK_MESSAGE_FROM_DATABASE_ID;
-                if (DatabaseExceptionChecker.isTransientException(exception)) {
-                    LOGGER.error(
-                        failure.toString(partitionId, jobId, taskMessage.getTracking().getJobTaskId(), taskMessage.getTo()), exception);
-                    throw new DocumentWorkerTransientException(
-                        failure.toString(partitionId, jobId, taskMessage.getTracking().getJobTaskId(), taskMessage.getTo()), exception);
-                } else {
-                    processFailure(
-                        failure, exception, document, partitionId, jobId, taskMessage.getTracking().getJobTaskId(), taskMessage.getTo());
+        // Keep going while there's more stowed tasks to unstow.
+        while (stowedTaskRows.size() > 0) {
+            // Process the current batch of stowed tasks.
+            for (final StowedTaskRow stowedTaskRow : stowedTaskRows) {
+                final TaskMessage taskMessage;
+                try {
+                    taskMessage = convertStowedTaskRowToTaskMessage(stowedTaskRow);
+                } catch (final IOException exception) {
+                    stowedTaskRowsToExclude.add(stowedTaskRow); // Exclude task from subsequent iterations of while loop.
+                    final TaskUnstowingWorkerFailure failure
+                        = TaskUnstowingWorkerFailure.FAILED_TO_CONVERT_DATABASE_ROW_TO_TASK_MESSAGE_ID;
+                    processFailure(failure, exception, document, stowedTaskRow.getPartitionId(), stowedTaskRow.getJobId(),
+                                   stowedTaskRow.getTrackingInfoJobTaskId());
+                    continue;
                 }
+
+                try {
+                    queueServices.sendTaskMessage(taskMessage);
+                    LOGGER.info("Sent unstowed task message with partitionId={}, jobId={} and jobTaskId={} to queue={}",
+                                partitionId, jobId, taskMessage.getTracking().getJobTaskId(), taskMessage.getTo());
+                } catch (final Exception exception) {
+                    stowedTaskRowsToExclude.add(stowedTaskRow); // Exclude task from subsequent iterations of while loop.
+                    final TaskUnstowingWorkerFailure failure
+                        = TaskUnstowingWorkerFailure.FAILED_TO_SEND_UNSTOWED_TASK_MESSAGE_TO_QUEUE_ID;
+                    processFailure(failure, exception, document, partitionId, jobId, taskMessage.getTracking().getJobTaskId(),
+                                   taskMessage.getTo());
+                    continue;
+                }
+
+                try {
+                    databaseClient.deleteStowedTask(partitionId, jobId, taskMessage.getTracking().getJobTaskId());
+                    LOGGER.info("Deleted stowed task with partitionId={}, jobId={} and jobTaskId={} from database",
+                                partitionId, jobId, taskMessage.getTracking().getJobTaskId());
+                } catch (final Exception exception) {
+                    stowedTaskRowsToExclude.add(stowedTaskRow); // Exclude task from subsequent iterations of while loop.
+                    final TaskUnstowingWorkerFailure failure
+                        = TaskUnstowingWorkerFailure.FAILED_TO_DELETE_UNSTOWED_TASK_MESSAGE_FROM_DATABASE_ID;
+                    if (DatabaseExceptionChecker.isTransientException(exception)) {
+                        LOGGER.error(failure.toString(
+                            partitionId, jobId, taskMessage.getTracking().getJobTaskId(), taskMessage.getTo()), exception);
+                        throw new DocumentWorkerTransientException(failure.toString(
+                            partitionId, jobId, taskMessage.getTracking().getJobTaskId(), taskMessage.getTo()), exception);
+                    } else {
+                        processFailure(failure, exception, document, partitionId, jobId, taskMessage.getTracking().getJobTaskId(),
+                                       taskMessage.getTo());
+                    }
+                }
+            }
+
+            // Fetch next batch of stowed tasks.
+            LOGGER.info(
+                "Fetching next batch (using max batch size {}) of stowed task(s) for partitionId={} and jobId={} from database",
+                databaseMaximumBatchSize, partitionId, jobId);
+            try {
+                stowedTaskRows = databaseClient.getStowedTasks(partitionId, jobId, databaseMaximumBatchSize);
+                LOGGER.info("Fetched {} stowed task(s) for partitionId={} and jobId={} from database",
+                            stowedTaskRows.size(), partitionId, jobId);
+
+                // Exclude any rows that were failed to be processed from the next batch so we don't get stuck in an infinite loop.
+                final int numStowedTaskRowsBeforeExcluding = stowedTaskRows.size();
+                stowedTaskRows = stowedTaskRows.stream()
+                    .filter(stowedTask -> !stowedTaskRowsToExclude.contains(stowedTask))
+                    .collect(Collectors.toList());
+                final int numStowedTasksRowsAfterExcluding = stowedTaskRows.size();
+                if (numStowedTaskRowsBeforeExcluding != numStowedTasksRowsAfterExcluding) {
+                    LOGGER.warn("Excluded {} stowed task row(s) read from database from next batch to be processed as this row "
+                        + " or rows were previously unable to be processed and will not be retried",
+                                numStowedTaskRowsBeforeExcluding - numStowedTasksRowsAfterExcluding);
+                }
+            } catch (final DocumentWorkerTransientException exception) { // Thrown by for loop, rethrow.
+                throw exception;
+            } catch (final Exception exception) {
+                final TaskUnstowingWorkerFailure failure = TaskUnstowingWorkerFailure.FAILED_TO_READ_FROM_DATABASE_ID;
+                processFailure(failure, exception, document, partitionId, jobId);
+                return;
             }
         }
     }
 
     @Override
-    public void close() {
+    public void close()
+    {
         queueServices.close();
     }
 

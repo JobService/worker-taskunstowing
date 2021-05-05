@@ -22,8 +22,9 @@
     databasePassword: getenv("CAF_WORKER_TASKUNSTOWING_DATABASE_PASSWORD"),
     databaseAppName: getenv("CAF_WORKER_TASKUNSTOWING_DATABASE_APPNAME") || "worker-taskunstowing",
     databaseMaximumPoolSize: getenv("CAF_WORKER_TASKUNSTOWING_DATABASE_MAXIMUM_POOL_SIZE") || 5,
-    rabbitMQHost: getenv("CAF_RABBITMQ_HOST"),
-    rabbitMQPort: getenv("CAF_RABBITMQ_PORT"),
-    rabbitMQUsername: getenv("CAF_RABBITMQ_USERNAME"),
-    rabbitMQPassword: getenv("CAF_RABBITMQ_PASSWORD")
+    databaseMaximumBatchSize: getenv("CAF_WORKER_TASKUNSTOWING_DATABASE_MAXIMUM_BATCH_SIZE") || 10,
+    rabbitMQHost: getenv("CAF_RABBITMQ_HOST") || "localhost",
+    rabbitMQPort: getenv("CAF_RABBITMQ_PORT") || 5432,
+    rabbitMQUsername: getenv("CAF_RABBITMQ_USERNAME") || "guest",
+    rabbitMQPassword: getenv("CAF_RABBITMQ_PASSWORD") || "guest"
 });

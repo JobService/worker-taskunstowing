@@ -64,6 +64,6 @@ public final class TaskUnstowingWorkerFactory implements DocumentWorkerFactory
             return new UnhealthyWorker(e.getMessage());
         }
 
-        return new TaskUnstowingWorker(new DatabaseClient(configuration), queueServices);
+        return new TaskUnstowingWorker(new DatabaseClient(configuration), configuration.getDatabaseMaximumBatchSize(), queueServices);
     }
 }

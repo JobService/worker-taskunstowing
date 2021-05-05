@@ -46,6 +46,9 @@ public final class TaskUnstowingWorkerConfiguration
     @Min(1)
     private int databaseMaximumPoolSize;
 
+    @Min(1)
+    private int databaseMaximumBatchSize;
+
     @NotNull
     private String rabbitMQHost;
 
@@ -136,6 +139,16 @@ public final class TaskUnstowingWorkerConfiguration
     public void setDatabaseMaximumPoolSize(final int databaseMaximumPoolSize)
     {
         this.databaseMaximumPoolSize = databaseMaximumPoolSize;
+    }
+
+    public int getDatabaseMaximumBatchSize()
+    {
+        return databaseMaximumBatchSize;
+    }
+
+    public void setDatabaseMaximumBatchSize(final int databaseMaximumBatchSize)
+    {
+        this.databaseMaximumBatchSize = databaseMaximumBatchSize;
     }
 
     public String getRabbitMQHost()

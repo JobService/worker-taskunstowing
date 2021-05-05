@@ -15,6 +15,8 @@
  */
 package com.github.jobservice.workers.taskunstowing.database;
 
+import java.util.Objects;
+
 public final class StowedTaskRow
 {
     private final String partitionId;
@@ -140,5 +142,34 @@ public final class StowedTaskRow
     public String getCorrelationId()
     {
         return correlationId;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        int hash = 7;
+        hash = 31 * hash + Objects.hashCode(this.partitionId);
+        hash = 31 * hash + Objects.hashCode(this.jobId);
+        hash = 31 * hash + Objects.hashCode(this.trackingInfoJobTaskId);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof StowedTaskRow)) {
+            return false;
+        }
+        final StowedTaskRow other = (StowedTaskRow) obj;
+        if (!Objects.equals(this.partitionId, other.partitionId)) {
+            return false;
+        }
+        if (!Objects.equals(this.jobId, other.jobId)) {
+            return false;
+        }
+        return Objects.equals(this.trackingInfoJobTaskId, other.trackingInfoJobTaskId);
     }
 }
