@@ -105,8 +105,13 @@ public final class TaskUnstowingWorker implements DocumentWorker
                         stowedTaskRows.size(), partitionId, jobId);
         } catch (final Exception exception) {
             final TaskUnstowingWorkerFailure failure = TaskUnstowingWorkerFailure.FAILED_TO_READ_FROM_DATABASE_ID;
-            processFailure(failure, exception, document, partitionId, jobId);
-            return;
+            if (DatabaseExceptionChecker.isTransientException(exception)) {
+                LOGGER.error(failure.toString(partitionId, jobId), exception);
+                throw new DocumentWorkerTransientException(failure.toString(partitionId, jobId), exception);
+            } else {
+                processFailure(failure, exception, document, partitionId, jobId);
+                return;
+            }
         }
 
         // Keep track of the stowed tasks that failed to be unstowed so that we can exclude them and don't get stuck in an infinite loop.
@@ -185,8 +190,13 @@ public final class TaskUnstowingWorker implements DocumentWorker
                 throw exception;
             } catch (final Exception exception) {
                 final TaskUnstowingWorkerFailure failure = TaskUnstowingWorkerFailure.FAILED_TO_READ_FROM_DATABASE_ID;
-                processFailure(failure, exception, document, partitionId, jobId);
-                return;
+                if (DatabaseExceptionChecker.isTransientException(exception)) {
+                    LOGGER.error(failure.toString(partitionId, jobId), exception);
+                    throw new DocumentWorkerTransientException(failure.toString(partitionId, jobId), exception);
+                } else {
+                    processFailure(failure, exception, document, partitionId, jobId);
+                    return;
+                }
             }
         }
     }
