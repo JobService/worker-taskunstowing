@@ -15,7 +15,6 @@
  */
 package com.github.jobservice.workers.taskunstowing;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.hpe.caf.api.worker.TaskMessage;
