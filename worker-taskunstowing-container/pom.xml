@@ -417,6 +417,7 @@
                                     <port>${worker.adminport}:8081</port>
                                 </ports>
                                 <env>
+                                    <CAF_LOG_LEVEL>DEBUG</CAF_LOG_LEVEL>
                                     <CAF_WORKER_DATASTORE_PATH>/srv/common/webdav</CAF_WORKER_DATASTORE_PATH>
                                     <CAF_RABBITMQ_PREFETCH_BUFFER>1000</CAF_RABBITMQ_PREFETCH_BUFFER>
                                     <CAF_WORKER_RETRY_LIMIT>2</CAF_WORKER_RETRY_LIMIT>
@@ -429,6 +430,10 @@
                                     <CAF_WORKER_TASKUNSTOWING_DATABASE_USERNAME>${database.username}</CAF_WORKER_TASKUNSTOWING_DATABASE_USERNAME>
                                     <CAF_WORKER_TASKUNSTOWING_DATABASE_PASSWORD>${database.password}</CAF_WORKER_TASKUNSTOWING_DATABASE_PASSWORD>
                                     <CAF_WORKER_TASKUNSTOWING_DATABASE_APPNAME>${database.appname}</CAF_WORKER_TASKUNSTOWING_DATABASE_APPNAME>
+                                    <CAF_RABBITMQ_HOST>rabbitmq</CAF_RABBITMQ_HOST>
+                                    <CAF_RABBITMQ_PORT>5672</CAF_RABBITMQ_PORT>
+                                    <CAF_RABBITMQ_USERNAME>guest</CAF_RABBITMQ_USERNAME>
+                                    <CAF_RABBITMQ_PASSWORD>guest</CAF_RABBITMQ_PASSWORD>
                                 </env>
                                 <volumes>
                                     <from>

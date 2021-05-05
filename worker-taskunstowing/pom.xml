@@ -41,6 +41,10 @@
             <artifactId>caf-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.github.cafapi.util</groupId>
+            <artifactId>util-moduleloader</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.github.cafdataprocessing</groupId>
             <artifactId>worker-document-interface</artifactId>
             <scope>provided</scope>
@@ -50,8 +54,16 @@
             <artifactId>worker-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.github.workerframework</groupId>
+            <artifactId>util-rabbitmq</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
         </dependency>
         <dependency>
             <groupId>com.zaxxer</groupId>

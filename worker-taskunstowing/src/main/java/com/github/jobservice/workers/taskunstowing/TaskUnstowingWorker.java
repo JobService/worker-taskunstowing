@@ -29,11 +29,11 @@ import com.hpe.caf.worker.document.model.HealthMonitor;
 import com.github.jobservice.workers.taskunstowing.database.DatabaseClient;
 import com.github.jobservice.workers.taskunstowing.database.DatabaseExceptionChecker;
 import com.github.jobservice.workers.taskunstowing.database.StowedTaskRow;
+import com.github.jobservice.workers.taskunstowing.queue.QueueServices;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,10 +43,12 @@ public final class TaskUnstowingWorker implements DocumentWorker
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskUnstowingWorker.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final DatabaseClient databaseClient;
+    private final QueueServices queueServices;
 
-    public TaskUnstowingWorker(final DatabaseClient databaseClient)
+    public TaskUnstowingWorker(final DatabaseClient databaseClient, final QueueServices queueServices)
     {
         this.databaseClient = databaseClient;
+        this.queueServices = queueServices;
     }
 
     @Override
@@ -110,7 +112,7 @@ public final class TaskUnstowingWorker implements DocumentWorker
             }
 
             try {
-                workerTaskData.sendMessage(taskMessage);
+                queueServices.sendTaskMessage(taskMessage);
                 LOGGER.info("Sent unstowed task message with partition id {}, job id {} and job task id {} to queue {}",
                             partitionId, jobId, taskMessage.getTracking().getJobTaskId(), taskMessage.getTo());
             } catch (final Exception exception) {
@@ -136,6 +138,11 @@ public final class TaskUnstowingWorker implements DocumentWorker
                 }
             }
         }
+    }
+
+    @Override
+    public void close() {
+        queueServices.close();
     }
 
     private static void processFailure(

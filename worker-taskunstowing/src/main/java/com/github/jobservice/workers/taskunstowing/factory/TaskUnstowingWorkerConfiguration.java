@@ -46,6 +46,18 @@ public final class TaskUnstowingWorkerConfiguration
     @Min(1)
     private int databaseMaximumPoolSize;
 
+    @NotNull
+    private String rabbitMQHost;
+
+    @Min(1)
+    private int rabbitMQPort;
+
+    @NotNull
+    private String rabbitMQUsername;
+
+    @NotNull
+    private String rabbitMQPassword;
+
     public String getDatabaseHost()
     {
         return databaseHost;
@@ -124,5 +136,45 @@ public final class TaskUnstowingWorkerConfiguration
     public void setDatabaseMaximumPoolSize(final int databaseMaximumPoolSize)
     {
         this.databaseMaximumPoolSize = databaseMaximumPoolSize;
+    }
+
+    public String getRabbitMQHost()
+    {
+        return rabbitMQHost;
+    }
+
+    public void setRabbitMQHost(final String rabbitMQHost)
+    {
+        this.rabbitMQHost = rabbitMQHost;
+    }
+
+    public int getRabbitMQPort()
+    {
+        return rabbitMQPort;
+    }
+
+    public void setRabbitMQPort(final int rabbitMQPort)
+    {
+        this.rabbitMQPort = rabbitMQPort;
+    }
+
+    public String getRabbitMQUsername()
+    {
+        return rabbitMQUsername;
+    }
+
+    public void setRabbitMQUsername(final String rabbitMQUsername)
+    {
+        this.rabbitMQUsername = rabbitMQUsername;
+    }
+
+    public String getRabbitMQPassword()
+    {
+        return rabbitMQPassword;
+    }
+
+    public void setRabbitMQPassword(final String rabbitMQPassword)
+    {
+        this.rabbitMQPassword = rabbitMQPassword;
     }
 }

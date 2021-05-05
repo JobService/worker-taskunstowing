@@ -22,6 +22,13 @@ import com.hpe.caf.worker.document.extensibility.DocumentWorkerFactory;
 import com.hpe.caf.worker.document.model.Application;
 import com.github.jobservice.workers.taskunstowing.TaskUnstowingWorker;
 import com.github.jobservice.workers.taskunstowing.database.DatabaseClient;
+import com.github.jobservice.workers.taskunstowing.queue.QueueServices;
+import com.github.jobservice.workers.taskunstowing.queue.QueueServicesFactory;
+import com.hpe.caf.api.Codec;
+import com.hpe.caf.util.ModuleLoader;
+import com.hpe.caf.util.ModuleLoaderException;
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +47,23 @@ public final class TaskUnstowingWorkerFactory implements DocumentWorkerFactory
             LOGGER.error("Failed to load Task Unstowing Worker configuration", e);
             return new UnhealthyWorker(e.getMessage());
         }
-        return new TaskUnstowingWorker(new DatabaseClient(configuration));
+
+        final Codec codec;
+        try {
+            codec = ModuleLoader.getService(Codec.class);
+        } catch (final ModuleLoaderException e) {
+            LOGGER.error("Failed to load Task Unstowing Worker codec", e);
+            return new UnhealthyWorker(e.getMessage());
+        }
+
+        final QueueServices queueServices;
+        try {
+            queueServices = QueueServicesFactory.create(configuration, codec);
+        } catch (final IOException | TimeoutException e) {
+            LOGGER.error("Failed to load Task Unstowing Worker queue services", e);
+            return new UnhealthyWorker(e.getMessage());
+        }
+
+        return new TaskUnstowingWorker(new DatabaseClient(configuration), queueServices);
     }
 }
