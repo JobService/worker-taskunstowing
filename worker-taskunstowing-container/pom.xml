@@ -417,7 +417,6 @@
                                     <port>${worker.adminport}:8081</port>
                                 </ports>
                                 <env>
-                                    <CAF_LOG_LEVEL>DEBUG</CAF_LOG_LEVEL>
                                     <CAF_WORKER_DATASTORE_PATH>/srv/common/webdav</CAF_WORKER_DATASTORE_PATH>
                                     <CAF_RABBITMQ_PREFETCH_BUFFER>1000</CAF_RABBITMQ_PREFETCH_BUFFER>
                                     <CAF_WORKER_RETRY_LIMIT>2</CAF_WORKER_RETRY_LIMIT>
