@@ -356,7 +356,7 @@
                             <alias>worker-taskunstowing</alias>
                             <name>${dockerJobServiceOrg}worker-taskunstowing${dockerProjectVersion}</name>
                             <build>
-                                <from>${dockerHubPublic}/cafapi/opensuse-jre11:3</from>
+                                <from>${dockerHubPublic}/cafapi/prereleases:opensuse-jre11-3.5.0-SNAPSHOT</from>
                                 <cmd>
                                     <exec>
                                         <args>/maven/worker.sh</args>
